@@ -89,7 +89,6 @@ def plot_graph(energies, qx_vals):
         ax.plot(qx_vals, energies[:, lower_band],
                 color='black', lw=0.9, alpha=0.9)
 
-    # --- Aesthetic touches ---
     ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
     ax.set_ylabel(r"$E / \gamma_1$", fontsize=12)
     ax.set_title(
@@ -99,6 +98,7 @@ def plot_graph(energies, qx_vals):
     ax.set_ylim(-2, 2)
     ax.grid(False)
     plt.tight_layout()
+    plt.savefig("./plots/rmg_bandstructure.png", dpi=300)
     plt.show()
 
 
