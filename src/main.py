@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.constants import e, hbar
 import matplotlib.pyplot as plt
+from sim import Simulation
 
 HBAR_EV = hbar / e
 
@@ -102,7 +103,7 @@ def plot_graph(energies, qx_vals):
     plt.show()
 
 
-def main():
+def main2():
     samples = 400
     n = 300  # Number of layers
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
@@ -120,6 +121,13 @@ def main():
         energy_over_hop = eigvals / hop[1]
         results[np.where(qxs == qx)[0][0], :] = energy_over_hop
     plot_graph(results, qx_over_qc)
+
+
+def main():
+    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
+    mag = np.array([1, 0])  # Magnetic field in Tesla
+    sim = Simulation(n=1000, hop=hop, mag=mag, hitrate=25)
+    sim.run(save=True)
 
 
 if __name__ == "__main__":
