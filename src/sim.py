@@ -89,7 +89,7 @@ class Simulation:
 
         ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
         ax.set_ylabel(r"$\epsilon / \gamma_1$", fontsize=12)
-        ax.set_title(f"$B_x = 5$T", fontsize=13)
+        ax.set_title(f"$B_x = {self.mag[0]}$T", fontsize=13)
         ax.axhline(0, color='gray', lw=0.6, ls='--')  # zero-energy line
         ax.set_xlim(0, 1.5)
         ax.set_ylim(-2, 2)
@@ -100,6 +100,16 @@ class Simulation:
             print(f"Saving figure as {title}")
             plt.savefig(title, dpi=300)
         plt.show()
+
+    def save(self, energies, qx_vals):
+        np.savez(f"./data/RMG_{self.mag[0]}_{self.n}.npz",
+                 energies=energies, qx_vals=qx_vals)
+    
+    def open(self, filename):
+        data = np.load(filename)
+        energies = data['energies']
+        qx_vals = data['qx_vals']
+        return energies, qx_vals
 
     def run(self, save: bool = False):
         energies = np.zeros((self.samples, 2 * self.n))

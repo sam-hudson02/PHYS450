@@ -1,6 +1,4 @@
 import numpy as np
-from scipy.constants import e, hbar
-import matplotlib.pyplot as plt
 from sim import Simulation
 
 
