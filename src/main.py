@@ -12,8 +12,9 @@ def minimal():
 def edge_states(): 
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
     edge = EdgeStates(n=10, hop=hop)
-    mag = np.array([0, 0])  # Magnetic field in Tesla
-    q = np.array([0, 0])  # Momentum vector
+    mag = np.array([50, 0])  # Magnetic field in Tesla
+    qx = edge.qc*0.1
+    q = np.array([qx, 0.0])
     edge.run(q, mag)
 
 def main():

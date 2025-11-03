@@ -3,7 +3,6 @@ from scipy.constants import hbar as hbar_SI, e as eC
 import matplotlib.pyplot as plt
 from alive_progress import alive_bar
 
-
 class Simulation:
     def __init__(self, n: int, hop: np.ndarray, mag: np.ndarray,
                  d: float = 0.346e-9, max_qx_qc: float = 1.5,
