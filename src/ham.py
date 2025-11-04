@@ -4,8 +4,7 @@ from scipy.constants import hbar as hbar_SI, e as eC
 
 class DisorderType(Enum):
     NONE = 0
-    TYPE1 = 1
-    TYPE2 = 2
+    ONSITE = 1
 
 class Hamiltonian:
     def __init__(self, q: np.ndarray, n: int, hop: np.ndarray,
@@ -67,33 +66,42 @@ class Hamiltonian:
             if i < self.n - 1:
                 ham[2 * i + 1, 2 * (i + 1)] = gamma_1
                 ham[2 * (i + 1), 2 * i + 1] = gamma_1
+        if self.disorder_type == DisorderType.ONSITE:
+            for i in range(self.n):
+                onsite_energy = np.random.uniform(-self.disorder_strength, self.disorder_strength)
+                ham[i, i] = onsite_energy
         return ham
 
-    @property
     def matrix(self) -> np.ndarray:
         return self._construct_matrix()
     
-    def solve_hamiltonian(self) -> tuple[np.ndarray, np.ndarray]:
+    def eigh(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Solve the hamiltonian.
         Args:
             q (np.ndarray): A 2D momentum vector.
             mag (np.ndarray): A 2D magnetic field vector.
         Returns:
-            np.ndarray: |psi|^2 for the zero energy state.
+            tuple[np.ndarray, np.ndarray]: Eigenvalues, Eigenvectors
         """
-        ham = self.matrix
+        ham = self.matrix()
         evals, evecs = np.linalg.eigh(ham)
         return evals, evecs
 
-    @property
+    def evals(self) -> np.ndarray:
+        return np.linalg.eigvalsh(self.matrix())
+
+    def evecs(self) -> np.ndarray:
+        v = np.linalg.eigh(self.matrix())[1]
+        return v
+
     def zero_energy_states(self) -> tuple[list[np.ndarray], list[complex]]:
-        evals, evecs = self.solve_hamiltonian()
+        evals, evecs = self.eigh()
         zero_states_vec = []
         zero_states_e = []
         for i, val in enumerate(evals):
             print(f"Eigenvalue {i}: {val}")
-            if np.isclose(val, 0, atol=1e-2):
+            if np.isclose(val, 0, atol=1e-6):
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
                 zero_states_e.append(val)
@@ -101,11 +109,11 @@ class Hamiltonian:
 
     @property
     def egap(self) -> float:
-        zero_states = self.zero_energy_states[1]
+        zero_states = self.zero_energy_states()[1]
         if len(zero_states) < 2:
             return 0.0
         if len(zero_states) == 2:
-            evals, _ = self.solve_hamiltonian()
+            evals, _ = self.eigh()
             sorted_evals = np.sort(np.abs(evals))
             return sorted_evals[1] - sorted_evals[0]
         raise ValueError("More than two zero energy states found.")
