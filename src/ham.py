@@ -5,6 +5,8 @@ from scipy.constants import hbar as hbar_SI, e as eC
 class DisorderType(Enum):
     NONE = 0
     ONSITE = 1
+    HOPPING = 2
+    BOTH = 3
 
 class Hamiltonian:
     def __init__(self, q: np.ndarray, n: int, hop: np.ndarray,
@@ -66,10 +68,18 @@ class Hamiltonian:
             if i < self.n - 1:
                 ham[2 * i + 1, 2 * (i + 1)] = gamma_1
                 ham[2 * (i + 1), 2 * i + 1] = gamma_1
-        if self.disorder_type == DisorderType.ONSITE:
+        if self.disorder_type == DisorderType.ONSITE \
+        or self.disorder_type == DisorderType.BOTH:
             for i in range(self.n):
                 onsite_energy = np.random.uniform(-self.disorder_strength, self.disorder_strength)
-                ham[i, i] = onsite_energy
+                ham[2 * i, 2 * i] += onsite_energy
+                ham[2 * i + 1, 2 * i + 1] += onsite_energy
+        if self.disorder_type == DisorderType.HOPPING \
+        or self.disorder_type == DisorderType.BOTH:
+            for i in range(self.n - 1):
+                hopping_variation = np.random.uniform(-self.disorder_strength, self.disorder_strength)
+                ham[2 * i + 1, 2 * (i + 1)] += hopping_variation
+                ham[2 * (i + 1), 2 * i + 1] += hopping_variation
         return ham
 
     def matrix(self) -> np.ndarray:
