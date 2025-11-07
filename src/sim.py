@@ -1,3 +1,4 @@
+from numpy.random import f
 from ham import DisorderType
 import numpy as np
 from alive_progress import alive_bar
@@ -55,15 +56,24 @@ class Simulation:
         plt.savefig(title, dpi=300)
         plt.show()
 
-    def _plot_eg(self, eg_list: list[tuple[float, float]], max_disorder_strength: float):
+    def _plot_eg(self, eg_onsite_list: list[tuple[float, float]],
+                 eg_hopping_list, max_disorder_strength: float):
         _, ax = plt.subplots(figsize=(7, 5))
-        disorder_strengths = np.linspace(0, max_disorder_strength, len(eg_list))
-        means = [eg[0] for eg in eg_list]
-        stds = [eg[1] for eg in eg_list]
-        print("Mean Energy Gaps:", means)
-        # plot each mean as triangle with error bars
-        ax.errorbar(disorder_strengths, means, yerr=stds, fmt='^', color='black',
-                    ecolor='red', elinewidth=1.5, capsize=5, markersize=8, label='Mean Energy Gap with Std Dev')
+
+        # convert to meV
+        disorder_strengths = np.linspace(0, max_disorder_strength, len(eg_onsite_list)) * 1e3
+        means_onsite = np.array([eg[0] for eg in eg_onsite_list]) * 1e3
+        err_onsite = np.array([eg[1] for eg in eg_onsite_list]) * 1e3
+        means_hopping = np.array([eg[0] for eg in eg_hopping_list]) * 1e3
+        err_hopping = np.array([eg[1] for eg in eg_hopping_list]) * 1e3
+
+        # plot each onsite as empty triangle and hopping as empty cirle
+        ax.errorbar(disorder_strengths, means_onsite, yerr=err_onsite,
+                    fmt='^', color='black', ecolor='black', elinewidth=1,
+                    capsize=4, label='Onsite Disorder')
+        ax.errorbar(disorder_strengths, means_hopping, yerr=err_hopping,
+                    fmt='o', color='black', ecolor='black', elinewidth=1,
+                    capsize=4, label='Hopping Disorder')
         ax.set_xlabel(r"$\delta$ (meV)", fontsize=12)
         ax.set_ylabel(r"$E_g$ (meV)", fontsize=12)
         ax.set_title(f"Energy Gap vs Disorder Strength\n$B_x = {self.mag[0]}$T, N={self.n}", fontsize=13)
@@ -162,36 +172,51 @@ class Simulation:
             os.makedirs("./plots/evals_comparison")
         plt.savefig(f'./plots/evals_comparison/evals_Bx{self.mag[0]}_N{self.n}.png')
 
-    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5):
+    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5, 
+                       onsite_e: float = 0.0):
         energies = np.zeros((samples, 2 * self.n))
         max_qx = max_qx_qc * self.qc
         qxs = np.linspace(0, max_qx, samples)
+        ham = Hamiltonian(qxs[0], self.n, self.hop, self.mag, onsite_e, self.d,
+                          self.disorder_type, self.disorder_strength)
         with alive_bar(samples, title="Computing bands") as bar:
             for i, qx in enumerate(qxs):
                 q = np.array([qx, 0])
-                ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d,
-                                  self.disorder_type, self.disorder_strength)
+                ham.update_q(q)
                 matrix = ham.matrix()
                 evals = np.linalg.eigvalsh(matrix)
                 energies[i, :] = np.sort(evals) / self.hop[1]
                 bar()
         self.plot_graph(energies, qxs / self.qc, hitrate)
-        return energies, qxs
+        return ham
 
     def eg_disorder(self, max_disorder_strength: float = 10, samples: int=20):
-        eg_list: list[tuple[float, float]] = []
+        eg_onsite_list: list[tuple[float, float]] = []
+        eg_hopping_list: list[tuple[float, float]] = []
         q = np.array([0.0, 0.0])
+        onsite_e = self.hop[1] * 0.1
         for i in range(11):
             disorder_strength = (max_disorder_strength / 10) * i
-            egs: list[float] = []
+            egs_onsite: list[float] = []
+            egs_hopping: list[float] = []
             for _ in range(samples):
-                ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d,
-                              self.disorder_type, disorder_strength)
-                egs.append(ham.egap)
-            mean = float(np.mean(egs))
-            std = float(np.std(egs))
-            eg_list.append((mean, std))
-        self._plot_eg(eg_list, max_disorder_strength)
+                ham_onsite = Hamiltonian(q, self.n, self.hop, self.mag, onsite_e, self.d,
+                              DisorderType.ONSITE, disorder_strength)
+                egs_onsite.append(ham_onsite.egap())
+                ham_hopping = Hamiltonian(q, self.n, self.hop, self.mag, onsite_e, self.d,
+                              DisorderType.HOPPING, disorder_strength)
+                egs_hopping.append(ham_hopping.egap())
+
+            mean_onsite = float(np.mean(egs_onsite))
+            err_onsite = float(np.std(egs_onsite)) / np.sqrt(samples)
+            print(f"Onsite Disorder Strength: {disorder_strength} eV, Mean EG: {mean_onsite} eV")
+            eg_onsite_list.append((mean_onsite, err_onsite))
+
+            mean_hopping = float(np.mean(egs_hopping))
+            err_hopping = float(np.std(egs_hopping)) / np.sqrt(samples)
+            print(f"Hopping Disorder Strength: {disorder_strength} eV, Mean EG: {mean_hopping} eV")
+            eg_hopping_list.append((mean_hopping, err_hopping))
+        self._plot_eg(eg_onsite_list, eg_hopping_list, max_disorder_strength)
 
     def psi_edge(self, q: np.ndarray):
         ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
@@ -221,7 +246,7 @@ class Simulation:
                 group = []
                 disorder_strength = (max_disorder_strength / samples) * i
                 for _ in range(passes):
-                    ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d,
+                    ham = Hamiltonian(q, self.n, self.hop, self.mag, 0.0, self.d,
                                     self.disorder_type, disorder_strength)
                     evals = ham.evals()
                     group.extend(evals)

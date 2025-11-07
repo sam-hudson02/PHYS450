@@ -10,7 +10,8 @@ class DisorderType(Enum):
 
 class Hamiltonian:
     def __init__(self, q: np.ndarray, n: int, hop: np.ndarray,
-                 mag: np.ndarray, d: float = 0.346e-9,
+                 mag: np.ndarray, onsite: float = 0.0,
+                 d: float = 0.346e-9,
                  disorder_type: DisorderType = DisorderType.NONE,
                  disorder_strength: float = 0.0):
         self.q = q
@@ -18,9 +19,12 @@ class Hamiltonian:
         self.d = d
         self.hop = hop
         self.mag = mag
+        self.onsite_energy = onsite
         self.disorder_type = disorder_type
         self.disorder_strength = disorder_strength
         self.hbar_ev = hbar_SI / eC
+        self.onsite_disorder_array = None
+        self.hopping_disorder_array = None
         self.a = 0.246e-9  # lattice constant in meters
         self.v = (np.sqrt(3) * self.hop[0] * self.a) / (2 * self.hbar_ev)
         self.qc = self.hop[1] / (self.v * self.hbar_ev)
@@ -61,23 +65,46 @@ class Hamiltonian:
         _, gamma_1 = self.hop
         ham = np.zeros((2 * self.n, 2 * self.n), dtype=complex)
         for i in range(self.n):
+            # intralayer hopping
             pi = self._get_pi(self.q, self.mag, i, dag=False)
             pi_dagger = self._get_pi(self.q, self.mag, i, dag=True)
             ham[2 * i, 2 * i + 1] = self.hbar_ev * self.v * pi
             ham[2 * i + 1, 2 * i] = self.hbar_ev * self.v * pi_dagger
+
+            # onsite energy
+            ham[2 * i, 2 * i] += self.onsite_energy
+            ham[2 * i + 1, 2 * i + 1] -= self.onsite_energy
+
+            # interlayer hopping
             if i < self.n - 1:
                 ham[2 * i + 1, 2 * (i + 1)] = gamma_1
                 ham[2 * (i + 1), 2 * i + 1] = gamma_1
+
+        # onsite disorder
         if self.disorder_type == DisorderType.ONSITE \
         or self.disorder_type == DisorderType.BOTH:
+            if self.onsite_disorder_array is None:
+                self.onsite_disorder_array = np.random.uniform(
+                    -self.disorder_strength,
+                    self.disorder_strength,
+                    size=self.n
+                )
             for i in range(self.n):
-                onsite_energy = np.random.uniform(-self.disorder_strength, self.disorder_strength)
+                onsite_energy = self.onsite_disorder_array[i]
                 ham[2 * i, 2 * i] += onsite_energy
                 ham[2 * i + 1, 2 * i + 1] += onsite_energy
+
+        # hopping disorder
         if self.disorder_type == DisorderType.HOPPING \
         or self.disorder_type == DisorderType.BOTH:
+            if self.hopping_disorder_array is None:
+                self.hopping_disorder_array = np.random.uniform(
+                    -self.disorder_strength,
+                    self.disorder_strength,
+                    size=self.n - 1
+                )
             for i in range(self.n - 1):
-                hopping_variation = np.random.uniform(-self.disorder_strength, self.disorder_strength)
+                hopping_variation = self.hopping_disorder_array[i]
                 ham[2 * i + 1, 2 * (i + 1)] += hopping_variation
                 ham[2 * (i + 1), 2 * i + 1] += hopping_variation
         return ham
@@ -98,6 +125,9 @@ class Hamiltonian:
         evals, evecs = np.linalg.eigh(ham)
         return evals, evecs
 
+    def update_q(self, q: np.ndarray):
+        self.q = q
+
     def evals(self) -> np.ndarray:
         return np.linalg.eigvalsh(self.matrix())
 
@@ -117,14 +147,20 @@ class Hamiltonian:
                 zero_states_e.append(val)
         return zero_states_vec, zero_states_e
 
-    @property
     def egap(self) -> float:
-        zero_states = self.zero_energy_states()[1]
-        if len(zero_states) < 2:
-            return 0.0
-        if len(zero_states) == 2:
-            evals, _ = self.eigh()
-            sorted_evals = np.sort(np.abs(evals))
-            return sorted_evals[1] - sorted_evals[0]
-        raise ValueError("More than two zero energy states found.")
+        evals = self.evals()
+        ind = None
+        for i, eval in enumerate(evals):
+            if eval >= 0:
+                ind = i
+                break
+        if ind is None:
+            raise ValueError("No positive eigenvalues found to compute energy gap.")
+        if ind == 0:
+            raise ValueError("No negative eigenvalues found to compute energy gap.")
+        above = np.abs(evals[ind+1] - evals[ind])
+        below = np.abs(evals[ind] - evals[ind - 1])
+        gap = min(above, below)
+        return gap
+
 

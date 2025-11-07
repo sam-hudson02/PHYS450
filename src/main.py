@@ -19,10 +19,9 @@ def edge_states():
 
 def egap():
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([10, 0])  # Magnetic field in Tesla
-    dt = DisorderType.ONSITE
-    sim = Simulation(hop, mag, n=12, disorder_type=dt, disorder_strength=10.0)
-    sim.eg_disorder()
+    mag = np.array([0, 0])  # Magnetic field in Tesla
+    sim = Simulation(hop, mag, n=12)
+    sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
 def dos():
     disorder_strength = 50
@@ -45,8 +44,18 @@ def compare_evals():
     q = np.array([qx, 0.0])
     sim.compare_evals(q, max_disorder_strength=disorder_strength)
 
+def band_structure_disorder():
+    disorder_strength = 0.01
+    disorder_type = DisorderType.ONSITE
+    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
+    mag = np.array([0, 0])  # Magnetic field in Tesla
+    onsite_energy = hop[1] / 10
+    sim = Simulation(hop, mag, n=20, disorder_type=disorder_type,
+                     disorder_strength=disorder_strength)
+    sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy)
+
 def main():
-    compare_evals()
+    egap()
 
 
 if __name__ == "__main__":
