@@ -109,6 +109,42 @@ class Hamiltonian:
                 ham[2 * (i + 1), 2 * i + 1] += hopping_variation
         return ham
 
+    def bernal_fault(self, i: int) -> np.ndarray:
+        """
+        Constructs a Hamiltonian matrix with a Bernal fault between layers i and i+1.
+        Args:
+            i (int): The layer index where the fault is introduced.
+        Returns:
+            np.ndarray: The Hamiltonian matrix with the Bernal fault.
+        """
+        if i < 0 or i >= self.n - 1:
+            raise ValueError("Layer index out of bounds for Bernal fault.")
+
+        ham = self._construct_matrix()
+
+        # Remove interlayer hopping between specified layers
+        ham[2 * i + 1, 2 * (i + 1)] = 0.0
+        ham[2 * (i + 1), 2 * i + 1] = 0.0
+
+        # Add hopping between the other sublattices of the two layers
+        ham[2 * i, 2 * (i + 1) + 1] = self.hop[1]
+        ham[2 * (i + 1) + 1, 2 * i] = self.hop[1]
+
+        if self.disorder_type == DisorderType.HOPPING \
+        or self.disorder_type == DisorderType.BOTH:
+            if self.hopping_disorder_array is None:
+                self.hopping_disorder_array = np.random.uniform(
+                    -self.disorder_strength,
+                    self.disorder_strength,
+                    size=self.n - 1
+                )
+            for i in range(self.n - 1):
+                hopping_variation = self.hopping_disorder_array[i]
+                ham[2 * i, 2 * (i + 1) + 1] += hopping_variation
+                ham[2 * (i + 1) + 1, 2 * i] += hopping_variation
+
+        return ham
+
     def matrix(self) -> np.ndarray:
         return self._construct_matrix()
     

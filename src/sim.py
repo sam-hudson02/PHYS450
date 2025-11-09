@@ -29,8 +29,9 @@ class Simulation:
         print(f"Expected bifurcation field scale: {B_est:.2f} T")
         print(f"Actual magnetic field: {mag[0]:.2f} T")
 
-    def plot_graph(self, energies, qx_vals, hitrate: int = 10):
-        fig, ax = plt.subplots(figsize=(7, 5))
+    def plot_graph(self, energies, qx_vals, hitrate: int = 10, 
+                   bernal_fault: bool = False):
+        _, ax = plt.subplots(figsize=(7, 5))
 
         to_plot = energies.shape[1] // (2 * hitrate)
         mid = energies.shape[1] // 2
@@ -38,10 +39,16 @@ class Simulation:
             band = n * hitrate
             upper_band = mid + band
             lower_band = mid - band - 1
-            ax.plot(qx_vals, energies[:, upper_band],
-                    color='black', lw=0.9, alpha=0.9)
-            ax.plot(qx_vals, energies[:, lower_band],
-                    color='black', lw=0.9, alpha=0.9)
+            if bernal_fault and (n == 0 or n == 1):
+                ax.plot(qx_vals, energies[:, upper_band],
+                        color='blue', lw=1.1, alpha=1.0)
+                ax.plot(qx_vals, energies[:, lower_band],
+                        color='blue', lw=1.1, alpha=1.0)
+            else:
+                ax.plot(qx_vals, energies[:, upper_band],
+                        color='black', lw=1.0, alpha=1.0)
+                ax.plot(qx_vals, energies[:, lower_band],
+                        color='black', lw=1.0, alpha=1.0)
 
         ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
         ax.set_ylabel(r"$\epsilon / \gamma_1$", fontsize=12)
@@ -172,8 +179,9 @@ class Simulation:
             os.makedirs("./plots/evals_comparison")
         plt.savefig(f'./plots/evals_comparison/evals_Bx{self.mag[0]}_N{self.n}.png')
 
-    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5, 
-                       onsite_e: float = 0.0):
+    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5,
+                       onsite_e: float = 0.0, bernal_fault: bool = False,
+                       bernal_layer: int = 2):
         energies = np.zeros((samples, 2 * self.n))
         max_qx = max_qx_qc * self.qc
         qxs = np.linspace(0, max_qx, samples)
@@ -183,11 +191,14 @@ class Simulation:
             for i, qx in enumerate(qxs):
                 q = np.array([qx, 0])
                 ham.update_q(q)
-                matrix = ham.matrix()
+                if bernal_fault:
+                    matrix = ham.bernal_fault(bernal_layer)
+                else:
+                    matrix = ham.matrix()
                 evals = np.linalg.eigvalsh(matrix)
                 energies[i, :] = np.sort(evals) / self.hop[1]
                 bar()
-        self.plot_graph(energies, qxs / self.qc, hitrate)
+        self.plot_graph(energies, qxs / self.qc, hitrate, bernal_fault)
         return ham
 
     def eg_disorder(self, max_disorder_strength: float = 10, samples: int=20):
