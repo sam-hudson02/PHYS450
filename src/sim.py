@@ -29,7 +29,7 @@ class Simulation:
         print(f"Expected bifurcation field scale: {B_est:.2f} T")
         print(f"Actual magnetic field: {mag[0]:.2f} T")
 
-    def plot_graph(self, energies, qx_vals, hitrate: int = 10, 
+    def _plot_band_structure(self, energies, qx_vals, hitrate: int = 10, 
                    bernal_fault: bool = False):
         _, ax = plt.subplots(figsize=(7, 5))
 
@@ -198,7 +198,7 @@ class Simulation:
                 evals = np.linalg.eigvalsh(matrix)
                 energies[i, :] = np.sort(evals) / self.hop[1]
                 bar()
-        self.plot_graph(energies, qxs / self.qc, hitrate, bernal_fault)
+        self._plot_band_structure(energies, qxs / self.qc, hitrate, bernal_fault)
         return ham
 
     def eg_disorder(self, max_disorder_strength: float = 10, samples: int=20):
@@ -272,6 +272,4 @@ class Simulation:
         zero_states = ham.zero_energy_states()[0]
         for i, psi in enumerate(zero_states):
             self._plot_prob_dist(psi, i)
-
-
 
