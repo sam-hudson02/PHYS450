@@ -1,15 +1,7 @@
 import numpy as np
-from edge import EdgeStates
 from sim import Simulation
 from ham import DisorderType
-from minimal import Simulation as MinimalSimulation
 
-
-def minimal():
-    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([5, 0])  # Magnetic field in Tesla
-    sim = MinimalSimulation(n=300, hop=hop, mag=mag)
-    sim.run()
 
 def edge_states():
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
@@ -45,12 +37,12 @@ def compare_evals():
     sim.compare_evals(q, max_disorder_strength=disorder_strength)
 
 def band_structure():
-    disorder_strength = 0.0
-    disorder_type = DisorderType.ONSITE
+    disorder_strength = 0.000
+    disorder_type = DisorderType.NONE
     bernal = True
     bernal_layer = 2
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([0, 0])  # Magnetic field in Tesla
+    mag = np.array([100, 0])  # Magnetic field in Tesla
     onsite_energy = hop[1] / 10
     sim = Simulation(hop, mag, n=20, disorder_type=disorder_type,
                      disorder_strength=disorder_strength)
