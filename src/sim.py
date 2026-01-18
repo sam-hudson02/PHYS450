@@ -1,4 +1,3 @@
-from numpy.random import f
 from ham import DisorderType
 import numpy as np
 from alive_progress import alive_bar
@@ -115,7 +114,7 @@ class Simulation:
         ax.set_xlim(0.5, len(m) + 0.5)
         ax.set_xlabel(r'cell index $m$', fontsize=14)
         ax.set_ylim(-0.8, 0.8)
-        ax.set_yticks([-0.8, 0, 0.8])
+        ax.set_yticks([-1, 0, 1])
         ax.set_xticks(m)
         ax.set_xticklabels(m)
         for spine in ax.spines.values():
@@ -185,7 +184,8 @@ class Simulation:
         energies = np.zeros((samples, 2 * self.n))
         max_qx = max_qx_qc * self.qc
         qxs = np.linspace(0, max_qx, samples)
-        ham = Hamiltonian(qxs[0], self.n, self.hop, self.mag, onsite_e, self.d,
+        q_0 = np.array([0.0, 0.0])
+        ham = Hamiltonian(q_0, self.n, self.hop, self.mag, onsite_e, self.d,
                           self.disorder_type, self.disorder_strength)
         with alive_bar(samples, title="Computing bands") as bar:
             for i, qx in enumerate(qxs):
@@ -229,8 +229,10 @@ class Simulation:
             eg_hopping_list.append((mean_hopping, err_hopping))
         self._plot_eg(eg_onsite_list, eg_hopping_list, max_disorder_strength)
 
-    def psi_edge(self, q: np.ndarray):
+    def psi_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2):
         ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
+        if bernal_fault:
+            ham.bernal_fault(bernal_layer)
         zero_states = ham.zero_energy_states()[0]
         for i, psi in enumerate(zero_states):
             self._plot_psi(psi, i)
@@ -267,8 +269,10 @@ class Simulation:
         self._plot_evals_comparison(collected_evals, disorder_strengths)
 
 
-    def prob_edge(self, q: np.ndarray):
+    def prob_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2):
         ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
+        if bernal_fault:
+            ham.bernal_fault(bernal_layer)
         zero_states = ham.zero_energy_states()[0]
         for i, psi in enumerate(zero_states):
             self._plot_prob_dist(psi, i)

@@ -58,7 +58,7 @@ def plot_graphene_band_3d(a, t, r):
     # change view angle
     ax.view_init(elev=10, azim=45)
     plt.savefig('plots/graphene/graphene_band_structure.png', 
-                dpi=300, bbox_inches='tight')
+                dpi=300)
 
 def plot_png_transparent_band(a, t, r):
     kx = np.linspace(-r, r, 1001)

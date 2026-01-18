@@ -14,6 +14,7 @@ class Hamiltonian:
                  d: float = 0.346e-9,
                  disorder_type: DisorderType = DisorderType.NONE,
                  disorder_strength: float = 0.0):
+        print(f"q: {q}")
         self.q = q
         self.n = n
         self.d = d
@@ -28,6 +29,7 @@ class Hamiltonian:
         self.a = 0.246e-9  # lattice constant in meters
         self.v = (np.sqrt(3) * self.hop[0] * self.a) / (2 * self.hbar_ev)
         self.qc = self.hop[1] / (self.v * self.hbar_ev)
+        self._matrix = self._construct_matrix()
 
     def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: int, dag: bool) -> np.ndarray:
         """Compute pi term for Hamiltonian matrix.
@@ -107,6 +109,8 @@ class Hamiltonian:
                 hopping_variation = self.hopping_disorder_array[i]
                 ham[2 * i + 1, 2 * (i + 1)] += hopping_variation
                 ham[2 * (i + 1), 2 * i + 1] += hopping_variation
+
+        self._matrix = ham
         return ham
 
     def bernal_fault(self, i: int) -> np.ndarray:
@@ -143,10 +147,11 @@ class Hamiltonian:
                 ham[2 * i, 2 * (i + 1) + 1] += hopping_variation
                 ham[2 * (i + 1) + 1, 2 * i] += hopping_variation
 
+        self._matrx = ham
         return ham
 
     def matrix(self) -> np.ndarray:
-        return self._construct_matrix()
+        return self._matrix
     
     def eigh(self) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -157,7 +162,7 @@ class Hamiltonian:
         Returns:
             tuple[np.ndarray, np.ndarray]: Eigenvalues, Eigenvectors
         """
-        ham = self.matrix()
+        ham = self._matrix
         evals, evecs = np.linalg.eigh(ham)
         return evals, evecs
 
@@ -165,7 +170,7 @@ class Hamiltonian:
         self.q = q
 
     def evals(self) -> np.ndarray:
-        return np.linalg.eigvalsh(self.matrix())
+        return np.linalg.eigvalsh(self._matrix)
 
     def evecs(self) -> np.ndarray:
         v = np.linalg.eigh(self.matrix())[1]
@@ -177,7 +182,7 @@ class Hamiltonian:
         zero_states_e = []
         for i, val in enumerate(evals):
             print(f"Eigenvalue {i}: {val}")
-            if np.isclose(val, 0, atol=1e-6):
+            if np.isclose(val, 0, atol=1e-2):
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
                 zero_states_e.append(val)
