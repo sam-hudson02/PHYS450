@@ -280,15 +280,13 @@ class Simulation:
         psi_list, e_list = states_list
         plt.figure(figsize=(8, 6))
         j_max = 2 * self.n + 1
-        # stack bar plots on top of each other if they overlay
-        j = np.arange(1, j_max) # atomic site
+        # atomic sites
+        j = np.arange(1, j_max)
         bottom = np.zeros(j_max - 1)
         for i, psi in enumerate(psi_list):
             psi_sq = np.abs(psi)**2
             e = e_list[i] / self.hop[1]
-            # standard notionation of e (e.g. 1.2345e+02)
             e_sci_notation = f"{e:.4e}"
-            # use colour map from energy pastel colour palette
             cmap = plt.get_cmap('Set1')
             color = cmap(i % cmap.N)
             plt.bar(j, psi_sq, width=0.8, bottom=bottom, color=color, alpha=0.7,
