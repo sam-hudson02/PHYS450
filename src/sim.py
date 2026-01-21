@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 from ham import DisorderType
 import numpy as np
 from alive_progress import alive_bar
@@ -268,12 +269,48 @@ class Simulation:
                 disorder_strengths.append(disorder_strength)
         self._plot_evals_comparison(collected_evals, disorder_strengths)
 
+    def plot_multi_prob_dist(self, q: np.ndarray, states_list: tuple[list[np.ndarray], list[complex]],
+                             sub_folder: str = ""):
+        """
+        Plot multiple edge state probability densities with different colours.
+        Args:
+            q (np.ndarray): The momentum vector q.
+            psi_list (list[np.ndarray]): List of wavefunctions psi.
+        """
+        psi_list, e_list = states_list
+        plt.figure(figsize=(8, 6))
+        j_max = 2 * self.n + 1
+        # stack bar plots on top of each other if they overlay
+        j = np.arange(1, j_max) # atomic site
+        bottom = np.zeros(j_max - 1)
+        for i, psi in enumerate(psi_list):
+            psi_sq = np.abs(psi)**2
+            e = e_list[i] / self.hop[1]
+            # standard notionation of e (e.g. 1.2345e+02)
+            e_sci_notation = f"{e:.4e}"
+            # use colour map from energy pastel colour palette
+            cmap = plt.get_cmap('Set1')
+            color = cmap(i % cmap.N)
+            plt.bar(j, psi_sq, width=0.8, bottom=bottom, color=color, alpha=0.7,
+                    label=f'$\epsilon / \gamma_1$ = {e_sci_notation}')
+            bottom += psi_sq
+        plt.xlabel('j')
+        plt.ylabel(r'$|\psi|^2$')
+        plt.title(f'Edge State Probability Densities\nMagnetic Field: Bx={self.mag[0]} T, By={self.mag[1]} T')
+        plt.xticks(ticks=np.arange(0, j_max, 20))
+        plt.legend()
+        dir_path = f'./plots{sub_folder}'
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        plt.savefig(f'./plots{sub_folder}edge_state_multi_Bx{self.mag[0]}_N{self.n}.png')
 
-    def prob_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2):
+
+
+    def prob_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2, sub_folder: str = ""):
         ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
         if bernal_fault:
             ham.bernal_fault(bernal_layer)
-        zero_states = ham.zero_energy_states()[0]
-        for i, psi in enumerate(zero_states):
-            self._plot_prob_dist(psi, i)
+        zero_states = ham.zero_energy_states()
+        print(zero_states)
+        self.plot_multi_prob_dist(q, zero_states, sub_folder)
 

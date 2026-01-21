@@ -182,7 +182,7 @@ class Hamiltonian:
         zero_states_e = []
         for i, val in enumerate(evals):
             print(f"Eigenvalue {i}: {val}")
-            if np.isclose(val, 0, atol=1e-2):
+            if np.isclose(val, 0, atol=1e-1):
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
                 zero_states_e.append(val)

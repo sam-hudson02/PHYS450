@@ -52,22 +52,25 @@ def band_structure_psi():
     sim.psi_edge(q, bernal, bernal_layer)
 
 def band_structure_prob():
-    disorder_strength = 0.000
-    disorder_type = DisorderType.NONE
-    bernal = True
-    bernal_layer = 3 
-    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([0, 0])  # Magnetic field in Tesla
-    onsite_energy = 0
-    sim = Simulation(hop, mag, n=20, disorder_type=disorder_type,
-                     disorder_strength=disorder_strength)
-    sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                     bernal_layer=bernal_layer)
-    q = np.array([0, 0])
-    sim.psi_edge(q, bernal, bernal_layer)
+    mags = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200]
+    sub_folder = "/bernal_fault_l7/"
+    for mag in mags:
+        disorder_strength = 0.000
+        disorder_type = DisorderType.NONE
+        bernal = True
+        bernal_layer = 7
+        hop = np.array([3.16, 0.381])  # Coupling parameters in eV
+        mag = np.array([mag, 0])  # Magnetic field in Tesla
+        onsite_energy = 0
+        sim = Simulation(hop, mag, n=20, disorder_type=disorder_type,
+                        disorder_strength=disorder_strength)
+        sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
+                        bernal_layer=bernal_layer)
+        q = np.array([0, 0])
+        sim.prob_edge(q, bernal, bernal_layer, sub_folder=sub_folder)
 
 def main():
-    band_structure()
+    band_structure_prob()
 
 
 if __name__ == "__main__":
