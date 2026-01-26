@@ -1,6 +1,6 @@
 from enum import Enum
 import numpy as np
-from scipy.constants import hbar as hbar_SI, e as eC
+from scipy.constants import h, hbar as hbar_SI, e as eC
 
 class DisorderType(Enum):
     NONE = 0
@@ -13,7 +13,9 @@ class Hamiltonian:
                  mag: np.ndarray, onsite: float = 0.0,
                  d: float = 0.346e-9,
                  disorder_type: DisorderType = DisorderType.NONE,
-                 disorder_strength: float = 0.0):
+                 disorder_strength: float = 0.0,
+                 bernal_fault: bool = False,
+                 bernal_layer: int = 2):
         print(f"q: {q}")
         self.q = q
         self.n = n
@@ -29,7 +31,14 @@ class Hamiltonian:
         self.a = 0.246e-9  # lattice constant in meters
         self.v = (np.sqrt(3) * self.hop[0] * self.a) / (2 * self.hbar_ev)
         self.qc = self.hop[1] / (self.v * self.hbar_ev)
+        self.bernal_fault = bernal_fault
+        self.bernal_layer = bernal_layer
         self._matrix = self._construct_matrix()
+        threshold = self.soliton_threshold()
+        zero_thresh = self.zero_energy_threshold()
+        print(f"Hamiltonian matrix constructed for n={n} layers.")
+        print(f"Soliton formation threshold magnetic field: {threshold:.2f} T")
+        print(f"Zero-energy states threshold magnetic field: {zero_thresh:.2f} T")
 
     def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: int, dag: bool) -> np.ndarray:
         """Compute pi term for Hamiltonian matrix.
@@ -110,10 +119,12 @@ class Hamiltonian:
                 ham[2 * i + 1, 2 * (i + 1)] += hopping_variation
                 ham[2 * (i + 1), 2 * i + 1] += hopping_variation
 
+        if self.bernal_fault:
+            ham = self.construct_bf(ham)
         self._matrix = ham
         return ham
 
-    def bernal_fault(self, i: int) -> np.ndarray:
+    def construct_bf(self, ham: np.ndarray) -> np.ndarray:
         """
         Constructs a Hamiltonian matrix with a Bernal fault between layers i and i+1.
         Args:
@@ -121,10 +132,10 @@ class Hamiltonian:
         Returns:
             np.ndarray: The Hamiltonian matrix with the Bernal fault.
         """
+        i = self.bernal_layer
         if i < 0 or i >= self.n - 1:
-            raise ValueError("Layer index out of bounds for Bernal fault.")
-
-        ham = self._construct_matrix()
+            raise ValueError(f"Layer index out of bounds for Bernal fault:\
+                             \n{i} not in [0, {self.n - 2}]")
 
         # Remove interlayer hopping between specified layers
         ham[2 * i + 1, 2 * (i + 1)] = 0.0
@@ -147,7 +158,6 @@ class Hamiltonian:
                 ham[2 * i, 2 * (i + 1) + 1] += hopping_variation
                 ham[2 * (i + 1) + 1, 2 * i] += hopping_variation
 
-        self._matrx = ham
         return ham
 
     def matrix(self) -> np.ndarray:
@@ -166,8 +176,16 @@ class Hamiltonian:
         evals, evecs = np.linalg.eigh(ham)
         return evals, evecs
 
-    def update_q(self, q: np.ndarray):
+    def update_q(self, q: np.ndarray) -> np.ndarray:
+        """
+        Update the momentum vector and reconstruct the Hamiltonian matrix.
+        Args:
+            q (np.ndarray): A 2D momentum vector.
+        Returns:
+            np.ndarray: The updated Hamiltonian matrix.
+        """
         self.q = q
+        return self._construct_matrix()
 
     def evals(self) -> np.ndarray:
         return np.linalg.eigvalsh(self._matrix)
@@ -181,7 +199,6 @@ class Hamiltonian:
         zero_states_vec = []
         zero_states_e = []
         for i, val in enumerate(evals):
-            print(f"Eigenvalue {i}: {val}")
             if np.isclose(val, 0, atol=1e-1):
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
@@ -204,4 +221,39 @@ class Hamiltonian:
         gap = min(above, below)
         return gap
 
+    def flux_all(self) -> float:
+        """
+        Calculate the magnetic flux through the multilayer system.
+        Returns:
+            float: The magnetic flux in Weber.
+        """
+        bx, _ = self.mag
+        flux = self.a * self.d * (self.n - 1) * bx
+        return flux
+
+    def soliton_threshold(self) -> float:
+        """
+        Calculate the soliton formation threshold magnetic field.
+        Returns:
+            float: The threshold magnetic field in Tesla.
+        """
+        flux_0 = h / eC
+        gamma_1 = self.hop[1]
+        gamma_0 = self.hop[0]
+        frac = (flux_0 * 2 * gamma_1) / (np.sqrt(3) * np.pi * gamma_0)
+        bx = frac / (self.a * self.d * (self.n - 1))
+        return bx
+    
+    def zero_energy_threshold(self):
+        """
+        Calculate the magnetic field at which zero-energy states appear.
+        Returns:
+            float: The threshold magnetic field in Tesla.
+        """
+        flux_0 = h / eC
+        gamma_1 = self.hop[1]
+        gamma_0 = self.hop[0]
+        frac = (2 * gamma_1 * flux_0 * self.n) / (np.sqrt(3) * np.pi * gamma_0)
+        bx = frac / (self.a * self.d * (self.n - 1))
+        return bx
 

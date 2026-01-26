@@ -9,7 +9,8 @@ import os
 
 class Simulation:
     def __init__(self, hop: np.ndarray, mag: np.ndarray, n: int, d: float = 0.346e-9,
-                 disorder_type: DisorderType = DisorderType.NONE, disorder_strength: float = 10):
+                 disorder_type: DisorderType = DisorderType.NONE, disorder_strength: float = 10,
+                 bernal_fault: bool = False, bernal_layer: int = 2):
         self.hop = hop
         self.mag = mag
         self.d = d
@@ -19,6 +20,8 @@ class Simulation:
         self.disorder_strength = disorder_strength
         self.L = n * d
         self.lorentzian_width = 0.005 * hop[1]
+        self.bernal_fault = bernal_fault
+        self.bernal_layer = bernal_layer
         hbar_ev = hbar_SI / eC
         self.v = (np.sqrt(3) * self.hop[0] * self.a) / (2 * hbar_ev)
         self.qc = self.hop[1] / (self.v * hbar_ev)
@@ -187,15 +190,12 @@ class Simulation:
         qxs = np.linspace(0, max_qx, samples)
         q_0 = np.array([0.0, 0.0])
         ham = Hamiltonian(q_0, self.n, self.hop, self.mag, onsite_e, self.d,
-                          self.disorder_type, self.disorder_strength)
+                          self.disorder_type, self.disorder_strength,
+                          bernal_fault=self.bernal_fault, bernal_layer=self.bernal_layer)
         with alive_bar(samples, title="Computing bands") as bar:
             for i, qx in enumerate(qxs):
                 q = np.array([qx, 0])
-                ham.update_q(q)
-                if bernal_fault:
-                    matrix = ham.bernal_fault(bernal_layer)
-                else:
-                    matrix = ham.matrix()
+                matrix = ham.update_q(q)
                 evals = np.linalg.eigvalsh(matrix)
                 energies[i, :] = np.sort(evals) / self.hop[1]
                 bar()
@@ -230,10 +230,8 @@ class Simulation:
             eg_hopping_list.append((mean_hopping, err_hopping))
         self._plot_eg(eg_onsite_list, eg_hopping_list, max_disorder_strength)
 
-    def psi_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2):
-        ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
-        if bernal_fault:
-            ham.bernal_fault(bernal_layer)
+    def psi_edge(self, q: np.ndarray):
+        ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d, bernal_fault=self.bernal_fault, bernal_layer=self.bernal_layer)
         zero_states = ham.zero_energy_states()[0]
         for i, psi in enumerate(zero_states):
             self._plot_psi(psi, i)
@@ -304,11 +302,9 @@ class Simulation:
 
 
 
-    def prob_edge(self, q: np.ndarray, bernal_fault: bool = False, bernal_layer: int = 2, sub_folder: str = ""):
-        ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d)
-        if bernal_fault:
-            ham.bernal_fault(bernal_layer)
+    def prob_edge(self, q: np.ndarray, sub_folder: str = ""):
+        ham = Hamiltonian(q, self.n, self.hop, self.mag, self.d, 
+                          bernal_fault=self.bernal_fault, bernal_layer=self.bernal_layer)
         zero_states = ham.zero_energy_states()
-        print(zero_states)
         self.plot_multi_prob_dist(q, zero_states, sub_folder)
 
