@@ -246,7 +246,7 @@ class Hamiltonian:
     
     def zero_energy_threshold(self):
         """
-        Calculate the magnetic field at which zero-energy states appear.
+        Calculate the magnetic field at which zero-energy states disappear.
         Returns:
             float: The threshold magnetic field in Tesla.
         """
