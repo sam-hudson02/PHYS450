@@ -52,31 +52,32 @@ def band_structure_psi():
     sim.psi_edge(q)
 
 def band_structure_prob():
-    # mags = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200]
-    mags = [0]
-    sub_folder = "/bernal_fault_middle_200/"
+    mags = [0, 50, 100, 150, 200, 250, 300]
+    sub_folder = "/l3_fault/"
     soliton_bx = 0
-    zero_energy_bx = 0
+    zero_energy_bx_1 = 0
+    zero_energy_bx_2 = 0
     disorder_strength = 0.000
     disorder_type = DisorderType.NONE
     bernal = True
-    bernal_layer = 99
+    bernal_layer = 3
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
     onsite_energy = 0
+    n = 20
     for bx in mags:
         mag = np.array([bx, 0])  # Magnetic field in Tesla
-        sim = Simulation(hop, mag, n=200, disorder_type=disorder_type,
+        sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
                         disorder_strength=disorder_strength, bernal_fault=bernal,
                          bernal_layer=bernal_layer)
         ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
                         bernal_layer=bernal_layer)
         soliton_bx = ham.soliton_threshold()
-        zero_energy_bx = ham.zero_energy_threshold()
+        zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
         q = np.array([0, 0])
         sim.prob_edge(q, sub_folder=sub_folder)
     # look at soliton threshold field
-    mag = np.array([soliton_bx, 0])
-    sim = Simulation(hop, mag, n=200, disorder_type=disorder_type,
+    mag = np.array([soliton_bx+1, 0])
+    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
                      disorder_strength=disorder_strength, bernal_fault=bernal,
                      bernal_layer=bernal_layer)
     ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
@@ -84,8 +85,16 @@ def band_structure_prob():
     q = np.array([0, 0])
     sim.prob_edge(q, sub_folder=sub_folder)
     # look at zero energy threshold field
-    mag = np.array([zero_energy_bx, 0])
-    sim = Simulation(hop, mag, n=200, disorder_type=disorder_type,
+    mag = np.array([zero_energy_bx_1, 0])
+    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
+                     disorder_strength=disorder_strength, bernal_fault=bernal,
+                        bernal_layer=bernal_layer)
+    ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
+                             bernal_layer=bernal_layer)
+    q = np.array([0, 0])
+    sim.prob_edge(q, sub_folder=sub_folder)
+    mag = np.array([zero_energy_bx_2, 0])
+    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
                      disorder_strength=disorder_strength, bernal_fault=bernal,
                         bernal_layer=bernal_layer)
     ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,

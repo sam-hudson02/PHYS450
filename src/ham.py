@@ -198,11 +198,24 @@ class Hamiltonian:
         evals, evecs = self.eigh()
         zero_states_vec = []
         zero_states_e = []
+        """
         for i, val in enumerate(evals):
-            if np.isclose(val, 0, atol=1e-1):
+            print(f"Eigenvalue {i}: {val}")
+            if np.isclose(val, 0, atol=1e-2):
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
                 zero_states_e.append(val)
+        """
+        # two lowest positive and two highest negative eigenvalues
+        pos_indices = [i for i, val in enumerate(evals) if val >= 0]
+        neg_indices = [i for i, val in enumerate(evals) if val < 0]
+        pos_indices.sort(key=lambda i: evals[i])
+        neg_indices.sort(key=lambda i: evals[i], reverse=True)
+        selected_indices = neg_indices[:2] + pos_indices[:2]
+        for i in selected_indices:
+            zero_state_vec = evecs[:, i]
+            zero_states_vec.append(zero_state_vec)
+            zero_states_e.append(evals[i])
         return zero_states_vec, zero_states_e
 
     def egap(self) -> float:
@@ -256,4 +269,21 @@ class Hamiltonian:
         frac = (2 * gamma_1 * flux_0 * self.n) / (np.sqrt(3) * np.pi * gamma_0)
         bx = frac / (self.a * self.d * (self.n - 1))
         return bx
+
+    def zero_energy_threshold_bernal(self):
+        """
+        Calculate the magnetic field at which zero-energy states disappear.
+        Returns:
+            float: The threshold magnetic field in Tesla.
+        """
+        n_1 = self.n - (self.bernal_layer + 1)
+        n_2 = self.bernal_layer + 1
+        flux_0 = h / eC
+        gamma_1 = self.hop[1]
+        gamma_0 = self.hop[0]
+        frac_1 = (2 * gamma_1 * flux_0 * n_1) / (np.sqrt(3) * np.pi * gamma_0)
+        frac_2 = (2 * gamma_1 * flux_0 * n_2) / (np.sqrt(3) * np.pi * gamma_0)
+        bx_1 = frac_1 / (self.a * self.d * (n_1 - 1))
+        bx_2 = frac_2 / (self.a * self.d * (n_2 - 1))
+        return bx_1, bx_2
 
