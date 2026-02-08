@@ -10,9 +10,11 @@ def edge_states():
     sim1.band_structure(samples=400, hitrate=1)
 
 def egap():
-    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([0, 0])  # Magnetic field in Tesla
-    sim = Simulation(hop, mag, n=12)
+    bernal = True
+    bernal_layer = 9
+    mag = np.array([50, 0])  # Magnetic field in Tesla
+    ham = Hamiltonian(n=20, mag=mag, bernal_fault=bernal, bernal_layer=bernal_layer)
+    sim = Simulation(ham)
     sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
 def compare_evals():
@@ -84,7 +86,8 @@ def band_structure_prob():
     sim.prob_edge(ham, sub_folder=sub_folder)
 
 def main():
-    band_structure_prob()
+    egap()
+    # band_structure_prob()
 
 
 if __name__ == "__main__":
