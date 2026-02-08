@@ -9,8 +9,11 @@ class DisorderType(Enum):
     BOTH = 3
 
 class Hamiltonian:
-    def __init__(self, q: np.ndarray, n: int, hop: np.ndarray,
-                 mag: np.ndarray, onsite: float = 0.0,
+    def __init__(self, n: int,
+                 q: np.ndarray = np.array([0.0, 0.0]),
+                 hop: np.ndarray = np.array([3.16, 0.381]),
+                 mag: np.ndarray = np.array([0.0, 0.0]),
+                 onsite: float = 0.0,
                  d: float = 0.346e-9,
                  disorder_type: DisorderType = DisorderType.NONE,
                  disorder_strength: float = 0.0,
@@ -137,26 +140,19 @@ class Hamiltonian:
             raise ValueError(f"Layer index out of bounds for Bernal fault:\
                              \n{i} not in [0, {self.n - 2}]")
 
+
+        # get existing interlayer hopping between layers i and i+1
+        # this accounts for any disorder that may have been added to the hopping terms
+        hop1 = ham[2 * i + 1, 2 * (i + 1)] 
+        hop2 = ham[2 * (i + 1), 2 * i + 1]
+
         # Remove interlayer hopping between specified layers
-        ham[2 * i + 1, 2 * (i + 1)] = 0.0
-        ham[2 * (i + 1), 2 * i + 1] = 0.0
+        ham[2 * i + 1, 2 * (i + 1)] = 0
+        ham[2 * (i + 1), 2 * i + 1] = 0
 
         # Add hopping between the other sublattices of the two layers
-        ham[2 * i, 2 * (i + 1) + 1] = self.hop[1]
-        ham[2 * (i + 1) + 1, 2 * i] = self.hop[1]
-
-        if self.disorder_type == DisorderType.HOPPING \
-        or self.disorder_type == DisorderType.BOTH:
-            if self.hopping_disorder_array is None:
-                self.hopping_disorder_array = np.random.uniform(
-                    -self.disorder_strength,
-                    self.disorder_strength,
-                    size=self.n - 1
-                )
-            for i in range(self.n - 1):
-                hopping_variation = self.hopping_disorder_array[i]
-                ham[2 * i, 2 * (i + 1) + 1] += hopping_variation
-                ham[2 * (i + 1) + 1, 2 * i] += hopping_variation
+        ham[2 * i, 2 * (i + 1) + 1] = hop1
+        ham[2 * (i + 1) + 1, 2 * i] = hop2
 
         return ham
 
@@ -185,6 +181,41 @@ class Hamiltonian:
             np.ndarray: The updated Hamiltonian matrix.
         """
         self.q = q
+        return self._construct_matrix()
+
+    def  update_mag(self, mag: np.ndarray) -> np.ndarray:
+        """
+        Update the magnetic field vector and reconstruct the Hamiltonian matrix.
+        Args:
+            mag (np.ndarray): A 2D magnetic field vector.
+        Returns:
+            np.ndarray: The updated Hamiltonian matrix.
+        """
+        self.mag = mag
+        return self._construct_matrix()
+
+    def update_disorder(self, disorder_type: DisorderType | None = None,
+                        disorder_strength: float | None = None) -> np.ndarray:
+        """
+        Randomly draw new disorder values for the onsite and hopping disorder arrays and reconstruct the Hamiltonian matrix.
+        Returns:
+            np.ndarray: The updated Hamiltonian matrix with shuffled disorder.
+        """
+        if disorder_type is not None:
+            self.disorder_type = disorder_type
+        if disorder_strength is not None:
+            self.disorder_strength = disorder_strength
+
+        self.onsite_disorder_array = np.random.uniform(
+            -self.disorder_strength,
+            self.disorder_strength,
+            size=self.n
+        )
+        self.hopping_disorder_array = np.random.uniform(
+            -self.disorder_strength,
+            self.disorder_strength,
+            size=self.n - 1
+        )
         return self._construct_matrix()
 
     def evals(self) -> np.ndarray:

@@ -1,6 +1,6 @@
 import numpy as np
 from sim import Simulation
-from ham import DisorderType
+from ham import DisorderType, Hamiltonian
 
 
 def edge_states():
@@ -15,24 +15,13 @@ def egap():
     sim = Simulation(hop, mag, n=12)
     sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
-def dos():
-    disorder_strength = 50
-    disorder_type = DisorderType.ONSITE
-    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    mag = np.array([50, 0])  # Magnetic field in Tesla
-    sim = Simulation(hop, mag, n=20, disorder_type=disorder_type, disorder_strength=disorder_strength)
-    qx = 0.8 * sim.qc
-    q = np.array([qx, 0.0])
-    sim.dos(q, max_e_gamma=2, energy_points=400)
-    sim.band_structure(samples=400, hitrate=1)
-
 def compare_evals():
     disorder_strength = 0.1
     disorder_type = DisorderType.BOTH
     hop = np.array([3.16, 0.381])  # Coupling parameters in eV
     mag = np.array([0, 0])  # Magnetic field in Tesla
     sim = Simulation(hop, mag, n=20, disorder_type=disorder_type)
-    qx = 0.8 * sim.qc
+    qx = 0.8 * sim.ham.qc
     q = np.array([qx, 0.0])
     sim.compare_evals(q, max_disorder_strength=disorder_strength)
 
@@ -46,61 +35,53 @@ def band_structure_psi():
     onsite_energy = 0
     sim = Simulation(hop, mag, n=20, disorder_type=disorder_type,
                      disorder_strength=disorder_strength)
-    sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                     bernal_layer=bernal_layer)
+    sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy)
     q = np.array([0, 0])
     sim.psi_edge(q)
 
 def band_structure_prob():
     mags = [0, 50, 100, 150, 200, 250, 300]
     sub_folder = "/l3_fault/"
-    soliton_bx = 0
-    zero_energy_bx_1 = 0
-    zero_energy_bx_2 = 0
-    disorder_strength = 0.000
-    disorder_type = DisorderType.NONE
+    disorder_strength = 0.1
+    disorder_type = DisorderType.ONSITE
     bernal = True
-    bernal_layer = 3
-    hop = np.array([3.16, 0.381])  # Coupling parameters in eV
-    onsite_energy = 0
+    bernal_layer = 7
     n = 20
+    mag = np.array([0, 0])  # Magnetic field in Tesla
+    ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
+                        bernal_fault=bernal, bernal_layer=bernal_layer)
+    sim = Simulation(ham)
     for bx in mags:
         mag = np.array([bx, 0])  # Magnetic field in Tesla
-        sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
-                        disorder_strength=disorder_strength, bernal_fault=bernal,
-                         bernal_layer=bernal_layer)
-        ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                        bernal_layer=bernal_layer)
-        soliton_bx = ham.soliton_threshold()
-        zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
-        q = np.array([0, 0])
-        sim.prob_edge(q, sub_folder=sub_folder)
+        ham.update_mag(mag)
+        sim.band_structure(samples=400, hitrate=1)
+        sim.prob_edge(ham, sub_folder=sub_folder)
+
+    zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
+    soliton_bx = ham.soliton_threshold()
+
     # look at soliton threshold field
-    mag = np.array([soliton_bx+1, 0])
-    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
-                     disorder_strength=disorder_strength, bernal_fault=bernal,
-                     bernal_layer=bernal_layer)
-    ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                             bernal_layer=bernal_layer)
     q = np.array([0, 0])
-    sim.prob_edge(q, sub_folder=sub_folder)
+    ham.update_q(q)
+
+    mag = np.array([soliton_bx+1, 0])
+    ham.update_mag(mag)
+
+    sim.band_structure(samples=400, hitrate=1)
+    sim.prob_edge(ham, sub_folder=sub_folder)
+
     # look at zero energy threshold field
     mag = np.array([zero_energy_bx_1, 0])
-    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
-                     disorder_strength=disorder_strength, bernal_fault=bernal,
-                        bernal_layer=bernal_layer)
-    ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                             bernal_layer=bernal_layer)
-    q = np.array([0, 0])
-    sim.prob_edge(q, sub_folder=sub_folder)
+    ham.update_mag(mag)
+
+    sim.band_structure(samples=400, hitrate=1)
+    sim.prob_edge(ham, sub_folder=sub_folder)
+
     mag = np.array([zero_energy_bx_2, 0])
-    sim = Simulation(hop, mag, n=n, disorder_type=disorder_type,
-                     disorder_strength=disorder_strength, bernal_fault=bernal,
-                        bernal_layer=bernal_layer)
-    ham = sim.band_structure(samples=400, hitrate=1, onsite_e=onsite_energy, bernal_fault=bernal,
-                             bernal_layer=bernal_layer)
-    q = np.array([0, 0])
-    sim.prob_edge(q, sub_folder=sub_folder)
+    ham.update_mag(mag)
+
+    sim.band_structure(samples=400, hitrate=1)
+    sim.prob_edge(ham, sub_folder=sub_folder)
 
 def main():
     band_structure_prob()
