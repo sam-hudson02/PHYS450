@@ -12,8 +12,9 @@ def edge_states():
 def egap():
     bernal = True
     bernal_layer = 9
-    mag = np.array([50, 0])  # Magnetic field in Tesla
-    ham = Hamiltonian(n=20, mag=mag, bernal_fault=bernal, bernal_layer=bernal_layer)
+    mag = np.array([150, 0])  # Magnetic field in Tesla
+    onsite_energy = 0.02425
+    ham = Hamiltonian(n=20, mag=mag, bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
     sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
@@ -44,14 +45,15 @@ def band_structure_psi():
 def band_structure_prob():
     mags = [0, 50, 100, 150, 200, 250, 300]
     sub_folder = "/l3_fault/"
-    disorder_strength = 0.1
+    disorder_strength = 0.0
     disorder_type = DisorderType.ONSITE
     bernal = True
     bernal_layer = 7
     n = 20
     mag = np.array([0, 0])  # Magnetic field in Tesla
+    onsite_energy = 0.00
     ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
-                        bernal_fault=bernal, bernal_layer=bernal_layer)
+                        bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
     for bx in mags:
         mag = np.array([bx, 0])  # Magnetic field in Tesla
@@ -85,10 +87,21 @@ def band_structure_prob():
     sim.band_structure(samples=400, hitrate=1)
     sim.prob_edge(ham, sub_folder=sub_folder)
 
-def main():
-    egap()
-    # band_structure_prob()
+def dos():
+    disorder_strength = 0.1
+    disorder_type = DisorderType.NONE
+    q = np.array([0, 0])
+    r = 100
+    mag = np.array([0, 0]) # Magnetic field in Tesla
+    ham = Hamiltonian(n=20, disorder_type=disorder_type, disorder_strength=disorder_strength,
+                      mag=mag, q=q)
+    sim = Simulation(ham)
+    sim.dos(energy_range=2, r=r)
 
+def main():
+    #egap()
+    #band_structure_prob()
+    dos()
 
 if __name__ == "__main__":
     main()

@@ -227,6 +227,7 @@ class Hamiltonian:
 
     def zero_energy_states(self) -> tuple[list[np.ndarray], list[complex]]:
         evals, evecs = self.eigh()
+        print(evals)
         zero_states_vec = []
         zero_states_e = []
         """
@@ -251,18 +252,9 @@ class Hamiltonian:
 
     def egap(self) -> float:
         evals = self.evals()
-        ind = None
-        for i, eval in enumerate(evals):
-            if eval >= 0:
-                ind = i
-                break
-        if ind is None:
-            raise ValueError("No positive eigenvalues found to compute energy gap.")
-        if ind == 0:
-            raise ValueError("No negative eigenvalues found to compute energy gap.")
-        above = np.abs(evals[ind+1] - evals[ind])
-        below = np.abs(evals[ind] - evals[ind - 1])
-        gap = min(above, below)
+        # return the middle values
+        mid = len(evals) // 2
+        gap = evals[mid] - evals[mid - 1]
         return gap
 
     def flux_all(self) -> float:

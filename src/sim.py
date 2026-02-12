@@ -254,8 +254,31 @@ class Simulation:
         plt.savefig(f'./plots{sub_folder}edge_state_multi_Bx{self.ham.mag[0]}_N{self.ham.n}.png')
 
 
+    def dos_at_e(self, e: float, evals: np.ndarray)-> float:
+        fac = 0.005
+        loz = fac * self.ham.hop[1]
+        total = 0
+        for eval in evals:
+            total += loz / ((e - eval)**2 + loz**2)
+        return total / (np.pi * self.ham.n * 2)
+
+
+    def dos(self, energy_range: float = 1.0, steps: int = 1000, r: int = 1):
+        e_range = energy_range * self.ham.hop[1]
+        es = np.linspace(-e_range, e_range, steps)
+        dos_values = np.zeros(steps)
+        for _ in range(r):
+            self.ham.update_disorder()
+            evals = self.ham.evals()
+            for i, e in enumerate(es):
+                dos_values[i] += self.dos_at_e(e, evals)
+        dos_values /= r
+        self._plot_dos(es, dos_values, e_range)
+
+
 
     def prob_edge(self, ham: Hamiltonian, sub_folder: str = ""):
+        ham.update_q(np.array([0, 0]))
         zero_states = ham.zero_energy_states()
         self.plot_multi_prob_dist(zero_states, sub_folder)
 
