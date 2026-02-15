@@ -1,4 +1,6 @@
 from logging import raiseExceptions
+
+from numpy.random import f
 from ham import DisorderType
 import numpy as np
 from alive_progress import alive_bar
@@ -140,9 +142,10 @@ class Simulation:
         plt.title(f'Density of States\nMagnetic Field: Bx={self.ham.mag[0]} T, By={self.ham.mag[1]} T')
         plt.xlim(-max_e, max_e)
         plt.grid(False)
-        if not os.path.exists("./plots/dos"):
-            os.makedirs("./plots/dos")
-        plt.savefig(f'./plots/dos/dos_Bx{self.ham.mag[0]}_N{self.ham.n}.png')
+        file_path = f'./plots/{self.ham.file_path}/dos'
+        os.makedirs(file_path, exist_ok=True)
+        file_name = f'{file_path}/dos_Bx{self.ham.mag[0]}_{self.ham.disorder_text}.png'
+        plt.savefig(file_name, dpi=300)
 
     def _plot_evals_comparison(self, collected_evals: list[np.ndarray], disorder_strengths: list[float]):
         plt.figure(figsize=(8, 6))

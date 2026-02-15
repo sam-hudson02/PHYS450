@@ -43,6 +43,23 @@ class Hamiltonian:
         print(f"Soliton formation threshold magnetic field: {threshold:.2f} T")
         print(f"Zero-energy states threshold magnetic field: {zero_thresh:.2f} T")
 
+    @property
+    def file_path(self) -> str:
+        bernal_str = f"bernal_{self.bernal_layer}" if self.bernal_fault else "no_bernal"
+        return f"n_{self.n}_{bernal_str}"
+
+    @property 
+    def disorder_text(self) -> str:
+        if self.disorder_type == DisorderType.ONSITE:
+            return f"onsite_disorder_{self.disorder_strength:.2f}"
+        elif self.disorder_type == DisorderType.HOPPING:
+            return f"hopping_disorder_{self.disorder_strength:.2f}"
+        elif self.disorder_type == DisorderType.BOTH:
+            return f"both_disorder_{self.disorder_strength:.2f}"
+        else:
+            return "no_disorder"
+
+
     def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: int, dag: bool) -> np.ndarray:
         """Compute pi term for Hamiltonian matrix.
 
