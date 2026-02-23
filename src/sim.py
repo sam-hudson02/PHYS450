@@ -41,9 +41,10 @@ class Simulation:
         ax.set_ylim(-2, 2)
         ax.grid(False)
         plt.tight_layout()
-        title = f"./plots/band_structure/RMG_{self.ham.mag[0]}_{self.ham.n}.png"
-        print(f"Saving figure as {title}")
-        plt.savefig(title, dpi=300)
+        folder_path = f"./plots/{self.ham.file_path}/band_structure"
+        os.makedirs(folder_path, exist_ok=True)
+        file_path = f"{folder_path}/band_structure_Bx{self.ham.mag[0]}_{self.ham.disorder_text}.png"
+        plt.savefig(file_path, dpi=300)
         plt.show()
 
     def _plot_eg(self, eg_onsite_list: list[tuple[float, float]],
@@ -69,11 +70,11 @@ class Simulation:
         ax.set_title(f"Energy Gap vs Disorder Strength\n$B_x = {self.ham.mag[0]}$T, N={self.ham.n}", fontsize=13)
         ax.grid(False)
         plt.tight_layout()
-        if not os.path.exists("./plots/eg_disorder"):
-            os.makedirs("./plots/eg_disorder")
-        file = f"./plots/eg_disorder/EG_RMG_{self.ham.mag[0]}_{self.ham.n}.png"
-        print(f"Saving figure as {file}")
-        plt.savefig(file, dpi=300)
+        folder_path = f"./plots/{self.ham.file_path}/eg_disorder"
+        os.makedirs(folder_path, exist_ok=True)
+        file_path = f"{folder_path}/EG_RMG_{self.ham.mag[0]}.png"
+        print(f"Saving figure as {file_path}")
+        plt.savefig(file_path, dpi=300)
 
     def _plot_psi(self, psi: np.ndarray, i: int):
         """
@@ -223,8 +224,7 @@ class Simulation:
                 disorder_strengths.append(disorder_strength)
         self._plot_evals_comparison(collected_evals, disorder_strengths)
 
-    def plot_multi_prob_dist(self, states_list: tuple[list[np.ndarray], list[complex]],
-                             sub_folder: str = ""):
+    def plot_multi_prob_dist(self, states_list: tuple[list[np.ndarray], list[complex]]):
         """
         Plot multiple edge state probability densities with different colours.
         Args:
@@ -251,10 +251,9 @@ class Simulation:
         plt.title(f'Edge State Probability Densities\nMagnetic Field: Bx={self.ham.mag[0]} T, By={self.ham.mag[1]} T')
         plt.xticks(ticks=np.arange(0, j_max, 20))
         plt.legend()
-        dir_path = f'./plots{sub_folder}'
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        plt.savefig(f'./plots{sub_folder}edge_state_multi_Bx{self.ham.mag[0]}_N{self.ham.n}.png')
+        file_path = f'./plots/{self.ham.file_path}/prob_dist'
+        os.makedirs(file_path, exist_ok=True)
+        plt.savefig(f'{file_path}/prob_dist_Bx{self.ham.mag[0]}.png')
 
 
     def dos_at_e(self, e: float, evals: np.ndarray)-> float:
@@ -266,22 +265,28 @@ class Simulation:
         return total / (np.pi * self.ham.n * 2)
 
 
-    def dos(self, energy_range: float = 1.0, steps: int = 1000, r: int = 1):
+    def dos(self, energy_range: float = 1.0, steps: int = 500, r: int = 1,
+            max_qx_qc: float = 10, q_steps: int = 1000):
+        q_range = max_qx_qc * self.ham.qc
+        qxs = np.linspace(0, q_range, q_steps)
         e_range = energy_range * self.ham.hop[1]
         es = np.linspace(-e_range, e_range, steps)
         dos_values = np.zeros(steps)
-        for _ in range(r):
-            self.ham.update_disorder()
-            evals = self.ham.evals()
-            for i, e in enumerate(es):
-                dos_values[i] += self.dos_at_e(e, evals)
-        dos_values /= r
+        for qx in qxs:
+            q = np.array([qx, 0])
+            self.ham.update_q(q)
+            for _ in range(r):
+                self.ham.update_disorder()
+                evals = self.ham.evals()
+                for i, e in enumerate(es):
+                    dos_values[i] += self.dos_at_e(e, evals)
+        dos_values /= (r)
         self._plot_dos(es, dos_values, e_range)
 
 
 
-    def prob_edge(self, ham: Hamiltonian, sub_folder: str = ""):
+    def prob_edge(self, ham: Hamiltonian):
         ham.update_q(np.array([0, 0]))
         zero_states = ham.zero_energy_states()
-        self.plot_multi_prob_dist(zero_states, sub_folder)
+        self.plot_multi_prob_dist(zero_states)
 
