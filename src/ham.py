@@ -18,13 +18,15 @@ class Hamiltonian:
                  disorder_type: DisorderType = DisorderType.NONE,
                  disorder_strength: float = 0.0,
                  bernal_fault: bool = False,
-                 bernal_layer: int = 2):
+                 bernal_layer: int = 2,
+                 extra_hop: bool = False):
         print(f"q: {q}")
         self.q = q
         self.n = n
         self.d = d
         self.hop = hop
         self.mag = mag
+        self.extra_hop = extra_hop
         self.onsite_energy = onsite
         self.disorder_type = disorder_type
         self.disorder_strength = disorder_strength
@@ -36,12 +38,22 @@ class Hamiltonian:
         self.qc = self.hop[1] / (self.v * self.hbar_ev)
         self.bernal_fault = bernal_fault
         self.bernal_layer = bernal_layer
+        self.extra_hop_terms = np.array([-0.017, 0.38, 0.14])
         self._matrix = self._construct_matrix()
         threshold = self.soliton_threshold()
         zero_thresh = self.zero_energy_threshold()
         print(f"Hamiltonian matrix constructed for n={n} layers.")
         print(f"Soliton formation threshold magnetic field: {threshold:.2f} T")
         print(f"Zero-energy states threshold magnetic field: {zero_thresh:.2f} T")
+
+    def fermi_v(self, hop: float) -> float:
+        """Calculate the Fermi velocity for a given intralayer hopping parameter.
+        Args:
+            hop (float): The intralayer hopping parameter in eV.
+        Returns:
+            float: The Fermi velocity in m/s.
+        """
+        return (np.sqrt(3) * hop * self.a) / (2 * self.hbar_ev)
 
     @property
     def file_path(self) -> str:
@@ -60,7 +72,7 @@ class Hamiltonian:
             return "no_disorder"
 
 
-    def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: int, dag: bool) -> np.ndarray:
+    def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: float | int, dag: bool) -> np.ndarray:
         """Compute pi term for Hamiltonian matrix.
 
         Args:
@@ -93,23 +105,43 @@ class Hamiltonian:
         Returns:
             np.ndarray: The Hamiltonian matrix.
         """
+
         _, gamma_1 = self.hop
+        gamma_2, gamma_3, gamma_4 = self.extra_hop_terms
+        v_3, v_4 = self.fermi_v(gamma_3), self.fermi_v(gamma_4)
+
         ham = np.zeros((2 * self.n, 2 * self.n), dtype=complex)
         for i in range(self.n):
             # intralayer hopping
             pi = self._get_pi(self.q, self.mag, i, dag=False)
             pi_dagger = self._get_pi(self.q, self.mag, i, dag=True)
-            ham[2 * i, 2 * i + 1] = self.hbar_ev * self.v * pi
-            ham[2 * i + 1, 2 * i] = self.hbar_ev * self.v * pi_dagger
+            ham[2 * i, 2 * i + 1] = self.hbar_ev * self.v * pi_dagger
+            ham[2 * i + 1, 2 * i] = self.hbar_ev * self.v * pi
 
             # onsite energy
             ham[2 * i, 2 * i] += self.onsite_energy
             ham[2 * i + 1, 2 * i + 1] -= self.onsite_energy
 
+            if self.extra_hop:
+                try:
+                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False)
+                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True)
+                    ham[2 * i, 2 * i + 2] += -self.hbar_ev * v_4 * pi_half_dagger
+                    ham[2 * i + 2, 2 * i] += -self.hbar_ev * v_4 * pi_half
+                    ham[2 * i , 2 * i + 3] += self.hbar_ev * v_3 * pi_half
+                    ham[2 * i + 3, 2 * i] += self.hbar_ev * v_3 * pi_half_dagger
+                except IndexError:
+                    pass
+
             # interlayer hopping
             if i < self.n - 1:
                 ham[2 * i + 1, 2 * (i + 1)] = gamma_1
                 ham[2 * (i + 1), 2 * i + 1] = gamma_1
+                if self.extra_hop:
+                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False)
+                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True)
+                    ham[2 * i + 1, 2 * (i + 1) + 1] += self.hbar_ev * v_4 * pi_half_dagger
+                    ham[2 * (i + 1) + 1, 2 * i + 1] += self.hbar_ev * v_4 * pi_half
 
         # onsite disorder
         if self.disorder_type == DisorderType.ONSITE \

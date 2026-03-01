@@ -72,10 +72,20 @@ def dos():
     sim = Simulation(ham)
     sim.dos(energy_range=2, r=r)
 
+def check_ham():
+    n = 20
+    extra_hop = True
+    bx = 10
+    mag = np.array([bx, 0]) # Magnetic field in Tesla
+    ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop)
+    sim = Simulation(ham)
+    sim.band_structure(samples=400, hitrate=1)
+
 def main():
     #egap()
-    dos()
+    #dos()
     #band_structure_prob()
+    check_ham()
 
 if __name__ == "__main__":
     main()
