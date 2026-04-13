@@ -35,7 +35,7 @@ class Simulation:
 
         ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
         ax.set_ylabel(r"$\epsilon / \gamma_1$", fontsize=12)
-        ax.set_title(f"$B_x = {self.ham.mag[0]}$T", fontsize=13)
+        # ax.set_title(f"$B_x = {self.ham.mag[0]}$T", fontsize=13)
         ax.axhline(0, color='gray', lw=0.6, ls='--')  # zero-energy line
         ax.set_xlim(0, 1.5)
         ax.set_ylim(-2, 2)

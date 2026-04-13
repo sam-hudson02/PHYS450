@@ -19,7 +19,8 @@ class Hamiltonian:
                  disorder_strength: float = 0.0,
                  bernal_fault: bool = False,
                  bernal_layer: int = 2,
-                 extra_hop: bool = False):
+                 extra_hop: bool = False,
+                 mag_dep: bool = True):
         print(f"q: {q}")
         self.q = q
         self.n = n
@@ -39,6 +40,7 @@ class Hamiltonian:
         self.bernal_fault = bernal_fault
         self.bernal_layer = bernal_layer
         self.extra_hop_terms = np.array([-0.017, 0.38, 0.14])
+        self.mag_dep = mag_dep
         self._matrix = self._construct_matrix()
         threshold = self.soliton_threshold()
         zero_thresh = self.zero_energy_threshold()
@@ -72,7 +74,8 @@ class Hamiltonian:
             return "no_disorder"
 
 
-    def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: float | int, dag: bool) -> np.ndarray:
+    def _get_pi(self, q: np.ndarray, mag: np.ndarray, i: float | int, dag: bool, 
+                mag_dep: bool = True) -> np.ndarray:
         """Compute pi term for Hamiltonian matrix.
 
         Args:
@@ -85,13 +88,16 @@ class Hamiltonian:
         bx, by = mag
         qx, qy = q
         zn = (i - (self.n - 1) / 2) * self.d
-        shift = eC * zn / hbar_SI
-        if dag:
-            result = (qx - shift * by) - \
-                1j * (qy + shift * bx)
+        if mag_dep:
+            shift = eC * zn / hbar_SI
         else:
-            result = (qx + shift * by) + \
-                1j * (qy - shift * bx)
+            shift = 0
+        real_part = qx + shift * by
+        imag_part = qy - shift * bx
+        if dag:
+            result = (real_part) - 1j * imag_part
+        else:
+            result = (real_part) + 1j * imag_part
         return result
 
     def _construct_matrix(self) -> np.ndarray:
@@ -124,8 +130,10 @@ class Hamiltonian:
 
             if self.extra_hop:
                 try:
-                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False)
-                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True)
+                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False,
+                                           mag_dep=self.mag_dep)
+                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True,
+                                                  mag_dep=self.mag_dep)
                     ham[2 * i, 2 * i + 2] += -self.hbar_ev * v_4 * pi_half_dagger
                     ham[2 * i + 2, 2 * i] += -self.hbar_ev * v_4 * pi_half
                     ham[2 * i , 2 * i + 3] += self.hbar_ev * v_3 * pi_half
@@ -138,10 +146,12 @@ class Hamiltonian:
                 ham[2 * i + 1, 2 * (i + 1)] = gamma_1
                 ham[2 * (i + 1), 2 * i + 1] = gamma_1
                 if self.extra_hop:
-                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False)
-                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True)
-                    ham[2 * i + 1, 2 * (i + 1) + 1] += self.hbar_ev * v_4 * pi_half_dagger
-                    ham[2 * (i + 1) + 1, 2 * i + 1] += self.hbar_ev * v_4 * pi_half
+                    pi_half = self._get_pi(self.q, self.mag, i + 0.5, dag=False,
+                                           mag_dep=self.mag_dep)
+                    pi_half_dagger = self._get_pi(self.q, self.mag, i + 0.5, dag=True,
+                                                  mag_dep=self.mag_dep)
+                    ham[2 * i + 1, 2 * (i + 1) + 1] += -self.hbar_ev * v_4 * pi_half_dagger
+                    ham[2 * (i + 1) + 1, 2 * i + 1] += -self.hbar_ev * v_4 * pi_half
 
         # onsite disorder
         if self.disorder_type == DisorderType.ONSITE \

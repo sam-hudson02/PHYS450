@@ -1,6 +1,7 @@
 import numpy as np
 from sim import Simulation
 from ham import DisorderType, Hamiltonian
+import sys
 
 
 def egap():
@@ -74,14 +75,21 @@ def dos():
 
 def check_ham():
     n = 20
-    extra_hop = True
-    bx = 10
+    extra_hop = False
+    mag_dep = True
+    bx = 0
+    bernal = True
+    bernal_layer = 7
     mag = np.array([bx, 0]) # Magnetic field in Tesla
-    ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop)
+    ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop, mag_dep=mag_dep,
+                      bernal_fault=bernal, bernal_layer=bernal_layer)
     sim = Simulation(ham)
+    print("Hamiltonian check:")
+    print(ham._matrix)
     sim.band_structure(samples=400, hitrate=1)
 
 def main():
+    np.set_printoptions(precision=3, suppress=True, linewidth=400)
     #egap()
     #dos()
     #band_structure_prob()
