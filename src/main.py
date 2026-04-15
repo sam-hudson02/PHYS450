@@ -88,12 +88,23 @@ def check_ham():
     print(ham._matrix)
     sim.band_structure(samples=400, hitrate=1)
 
+def trig_warp():
+    n = 3
+    extra_hop = True
+    mag_dep = False
+    bx = 50
+    mag = np.array([bx, 0]) # Magnetic field in Tesla
+    ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop, mag_dep=mag_dep)
+    sim = Simulation(ham)
+    sim.trig_warp(ham)
+
 def main():
     np.set_printoptions(precision=3, suppress=True, linewidth=400)
     #egap()
     #dos()
     #band_structure_prob()
-    check_ham()
+    #check_ham()
+    trig_warp()
 
 if __name__ == "__main__":
     main()

@@ -290,3 +290,67 @@ class Simulation:
         zero_states = ham.zero_energy_states()
         self.plot_multi_prob_dist(zero_states)
 
+    def trig_warp(self, ham: Hamiltonian, band_index: int | None = None):
+        qxs = np.linspace(-1.5 * self.ham.qc, 1.5 * self.ham.qc, 500)
+        qys = np.linspace(-1.5 * self.ham.qc, 1.5 * self.ham.qc, 500)
+        energies = np.zeros((len(qxs), len(qys), 2 * self.ham.n))
+        for i, qx in enumerate(qxs):
+            for j, qy in enumerate(qys):
+                q = np.array([qx, qy])
+                ham.update_q(q)
+                evals = ham.evals()
+                energies[i, j, :] = evals
+        print(ham._matrix)
+        # plot contour of energies with energy as color
+        plt.figure(figsize=(8, 6))
+        QX, QY = np.meshgrid(qxs / self.ham.qc, qys / self.ham.qc, indexing='ij')
+        if band_index is None:
+            # take lowest energy as band index
+            band_index = ham.n
+        Z = energies[:, :, band_index]
+
+        label_levels = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        # set sublevels as 0.02 0.04 0.06 0.08 0.12, 0.14, 0.16, 0.18, 0.22, 0.24 ect
+        sub_levels = [0.001]
+        for i in range(0, 10):
+            n = i / 10
+            for l in range(1, 5):
+                sub_levels.append(n + l * 0.02)
+
+        # mark local minima and maxima with triangles
+        # find local minima and maxima by comparing each point to its 8 neighbors
+        for i in range(1, Z.shape[0] - 1):
+            for j in range(1, Z.shape[1] - 1):
+                point = Z[i, j]
+                neighbors = [Z[i-1, j-1], Z[i-1, j], Z[i-1, j+1],
+                             Z[i, j-1],                 Z[i, j+1],
+                             Z[i+1, j-1], Z[i+1, j], Z[i+1, j+1]]
+                if all(point < neighbor for neighbor in neighbors):
+                    plt.plot(QX[i, j], QY[i, j], marker='v', color='black', markersize=5)
+                elif all(point > neighbor for neighbor in neighbors):
+                    plt.plot(QX[i, j], QY[i, j], marker='^', color='black', markersize=5)
+
+
+
+        # filled contour (background color)
+        cf = plt.contourf(QX, QY, Z, levels=400, cmap='viridis')
+        # contour lines on top
+        plt.contour(QX, QY, Z, levels=sub_levels, colors='black', linewidths=0.5)
+        cs_l = plt.contour(QX, QY, Z, levels=label_levels, colors='black', linewidths=1)
+
+        # label contour lines with level in label_levels
+        plt.clabel(cs_l, inline=True, fontsize=8, fmt='%.1f')
+        # colorbar with ticks at label_levels
+        plt.colorbar(cf, ticks=label_levels, label=r'$\epsilon / \gamma_1$')
+
+        plt.xlabel(r"$q_x / q_c$")
+        plt.ylabel(r"$q_y / q_c$")
+        plt.title(f"Bx={self.ham.mag[0]} T")
+        plt.grid(False)
+        file_path = f'./plots/{self.ham.file_path}/trig_warp'
+        os.makedirs(file_path, exist_ok=True)
+        plt.savefig(f'{file_path}/trig_warp_Bx{self.ham.mag[0]}.png', dpi=300)
+
+
+
+

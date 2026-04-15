@@ -26,6 +26,8 @@ class Hamiltonian:
         self.n = n
         self.d = d
         self.hop = hop
+        self.gamma_0 = hop[0]
+        self.gamma_1 = hop[1]
         self.mag = mag
         self.extra_hop = extra_hop
         self.onsite_energy = onsite
