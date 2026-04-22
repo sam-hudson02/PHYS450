@@ -35,7 +35,7 @@ class Simulation:
 
         ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
         ax.set_ylabel(r"$\epsilon / \gamma_1$", fontsize=12)
-        # ax.set_title(f"$B_x = {self.ham.mag[0]}$T", fontsize=13)
+        ax.set_title(f"$B_x = {self.ham.mag[0]}$T", fontsize=13)
         ax.axhline(0, color='gray', lw=0.6, ls='--')  # zero-energy line
         ax.set_xlim(0, 1.5)
         ax.set_ylim(-2, 2)
@@ -240,7 +240,7 @@ class Simulation:
         for i, psi in enumerate(psi_list):
             psi_sq = np.abs(psi)**2
             e = e_list[i] / self.ham.hop[1]
-            e_sci_notation = f"{e:.4e}"
+            e_sci_notation = f"{e:.2e}"
             cmap = plt.get_cmap('Set1')
             color = cmap(i % cmap.N)
             plt.bar(j, psi_sq, width=0.8, bottom=bottom, color=color, alpha=0.7,
@@ -248,12 +248,13 @@ class Simulation:
             bottom += psi_sq
         plt.xlabel('j')
         plt.ylabel(r'$|\psi|^2$')
-        plt.title(f'Edge State Probability Densities\nMagnetic Field: Bx={self.ham.mag[0]} T, By={self.ham.mag[1]} T')
+        # format magnetic field in title with 2 decimal place
+        plt.title(f'Edge State Probability Densities\nMagnetic Field: Bx={self.ham.mag[0]:.2f} T')
         plt.xticks(ticks=np.arange(0, j_max, 20))
         plt.legend()
         file_path = f'./plots/{self.ham.file_path}/prob_dist'
         os.makedirs(file_path, exist_ok=True)
-        plt.savefig(f'{file_path}/prob_dist_Bx{self.ham.mag[0]}.png')
+        plt.savefig(f'{file_path}/prob_dist_Bx{self.ham.mag[0]:.2f}.png')
 
 
     def dos_at_e(self, e: float, evals: np.ndarray)-> float:
@@ -285,9 +286,9 @@ class Simulation:
 
 
 
-    def prob_edge(self, ham: Hamiltonian):
+    def prob_edge(self, ham: Hamiltonian, num_pairs: int = 2):
         ham.update_q(np.array([0, 0]))
-        zero_states = ham.zero_energy_states()
+        zero_states = ham.zero_energy_states(num_pairs)
         self.plot_multi_prob_dist(zero_states)
 
     def trig_warp(self, ham: Hamiltonian, band_index: int | None = None):
@@ -341,7 +342,7 @@ class Simulation:
         # label contour lines with level in label_levels
         plt.clabel(cs_l, inline=True, fontsize=8, fmt='%.1f')
         # colorbar with ticks at label_levels
-        plt.colorbar(cf, ticks=label_levels, label=r'$\epsilon / \gamma_1$')
+        plt.colorbar(cf, label=r'$\epsilon$')
 
         plt.xlabel(r"$q_x / q_c$")
         plt.ylabel(r"$q_y / q_c$")

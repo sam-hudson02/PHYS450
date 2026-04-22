@@ -17,12 +17,13 @@ def egap():
         sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
 def band_structure_prob():
-    mags = [0, 50, 100, 150, 200, 250, 300]
+    mags = [0, 25, 50, 100, 150, 200, 250, 300]
     disorder_strength = 0.0
     disorder_type = DisorderType.ONSITE
-    bernal = True
+    bernal = False
     bernal_layer = 7
-    n = 20
+    n = 50
+    num_pairs = 1
     mag = np.array([0, 0])  # Magnetic field in Tesla
     onsite_energy = 0.00
     ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
@@ -32,7 +33,7 @@ def band_structure_prob():
         mag = np.array([bx, 0])  # Magnetic field in Tesla
         ham.update_mag(mag)
         sim.band_structure(samples=400, hitrate=1)
-        sim.prob_edge(ham)
+        sim.prob_edge(ham, num_pairs)
 
     zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
     soliton_bx = ham.soliton_threshold()
@@ -41,24 +42,24 @@ def band_structure_prob():
     q = np.array([0, 0])
     ham.update_q(q)
 
-    mag = np.array([soliton_bx+1, 0])
+    mag = np.array([soliton_bx, 0])
     ham.update_mag(mag)
 
     sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham)
+    sim.prob_edge(ham, num_pairs)
 
     # look at zero energy threshold field
     mag = np.array([zero_energy_bx_1, 0])
     ham.update_mag(mag)
 
     sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham)
+    sim.prob_edge(ham, num_pairs)
 
     mag = np.array([zero_energy_bx_2, 0])
     ham.update_mag(mag)
 
     sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham)
+    sim.prob_edge(ham, num_pairs)
 
 def dos():
     disorder_strength = 0.1
@@ -89,14 +90,16 @@ def check_ham():
     sim.band_structure(samples=400, hitrate=1)
 
 def trig_warp():
-    n = 3
-    extra_hop = True
-    mag_dep = False
-    bx = 50
-    mag = np.array([bx, 0]) # Magnetic field in Tesla
-    ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop, mag_dep=mag_dep)
-    sim = Simulation(ham)
-    sim.trig_warp(ham)
+    bxs = [0, 25]
+    for bx in bxs:
+        n = 20
+        extra_hop = True
+        mag_dep = True
+        mag = np.array([bx, 0]) # Magnetic field in Tesla
+        ham = Hamiltonian(n=n, mag=mag, extra_hop=extra_hop, mag_dep=mag_dep)
+        sim = Simulation(ham)
+        sim.band_structure(samples=400, hitrate=1)
+        sim.trig_warp(ham)
 
 def main():
     np.set_printoptions(precision=3, suppress=True, linewidth=400)

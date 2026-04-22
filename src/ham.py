@@ -286,7 +286,7 @@ class Hamiltonian:
         v = np.linalg.eigh(self.matrix())[1]
         return v
 
-    def zero_energy_states(self) -> tuple[list[np.ndarray], list[complex]]:
+    def zero_energy_states(self, num_pairs: int = 2) -> tuple[list[np.ndarray], list[complex]]:
         evals, evecs = self.eigh()
         print(evals)
         zero_states_vec = []
@@ -298,17 +298,30 @@ class Hamiltonian:
                 zero_state_vec = evecs[:, i]
                 zero_states_vec.append(zero_state_vec)
                 zero_states_e.append(val)
-        """
         # two lowest positive and two highest negative eigenvalues
+
         pos_indices = [i for i, val in enumerate(evals) if val >= 0]
         neg_indices = [i for i, val in enumerate(evals) if val < 0]
         pos_indices.sort(key=lambda i: evals[i])
         neg_indices.sort(key=lambda i: evals[i], reverse=True)
-        selected_indices = neg_indices[:2] + pos_indices[:2]
+        selected_indices = neg_indices[:num] + pos_indices[:num]
         for i in selected_indices:
             zero_state_vec = evecs[:, i]
             zero_states_vec.append(zero_state_vec)
             zero_states_e.append(evals[i])
+        """
+        middle_pos = self.n
+        middle_neg = self.n - 1
+        for i in range(num_pairs):
+            print(f"Selected eigenvalues for zero-energy states {i}: {evals[middle_neg - i]}, {evals[middle_pos + i]}")
+            zero_state_vec_pos = evecs[:, middle_pos + i]
+            zero_state_vec_neg = evecs[:, middle_neg - i]
+            zero_states_vec.append(zero_state_vec_pos)
+            zero_states_vec.append(zero_state_vec_neg)
+            zero_states_e.append(evals[middle_pos + i])
+            zero_states_e.append(evals[middle_neg - i])
+
+
         return zero_states_vec, zero_states_e
 
     def egap(self) -> float:
