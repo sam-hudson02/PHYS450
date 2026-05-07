@@ -286,7 +286,7 @@ class Hamiltonian:
         v = np.linalg.eigh(self.matrix())[1]
         return v
 
-    def zero_energy_states(self, num_pairs: int = 2) -> tuple[list[np.ndarray], list[complex]]:
+    def zero_energy_states(self, start: int = 0, end: int = 0) -> tuple[list[np.ndarray], list[complex]]:
         evals, evecs = self.eigh()
         print(evals)
         zero_states_vec = []
@@ -312,7 +312,9 @@ class Hamiltonian:
         """
         middle_pos = self.n
         middle_neg = self.n - 1
-        for i in range(num_pairs):
+
+        for i in range(start, end+1):
+            print(i)
             print(f"Selected eigenvalues for zero-energy states {i}: {evals[middle_neg - i]}, {evals[middle_pos + i]}")
             zero_state_vec_pos = evecs[:, middle_pos + i]
             zero_state_vec_neg = evecs[:, middle_neg - i]
@@ -352,6 +354,24 @@ class Hamiltonian:
         gamma_0 = self.hop[0]
         frac = (flux_0 * 2 * gamma_1) / (np.sqrt(3) * np.pi * gamma_0)
         bx = frac / (self.a * self.d * (self.n - 1))
+        return bx
+
+    def soliton_collision_threshold(self) -> float:
+        """
+        Calculate the magnetic field at which soltion collides with zero-energy states 
+        at the stracking fault.
+        Returns:
+            float: The threshold magnetic field in Tesla.
+        """
+        print(f"Calculating soliton collision threshold for Bernal layer {self.bernal_layer} and total layers {self.n}")
+        layer_offset = self.bernal_layer - ((self.n - 1) / 2)
+        layer_position = layer_offset * self.d
+        print(f"Layer offset from center: {layer_offset}")
+        flux_0 = h / eC
+        num = flux_0 * self.qc
+        denom = np.abs(layer_position * 2 * np.pi)
+        print(f"Numerator: {num:.2e}, Denominator: {denom:.2e}")
+        bx = num / denom
         return bx
     
     def zero_energy_threshold(self):

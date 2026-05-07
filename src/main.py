@@ -1,7 +1,6 @@
 import numpy as np
 from sim import Simulation
 from ham import DisorderType, Hamiltonian
-import sys
 
 
 def egap():
@@ -17,49 +16,37 @@ def egap():
         sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
 def band_structure_prob():
-    mags = [0, 25, 50, 100, 150, 200, 250, 300]
+    mags = [0.1, 25, 50, 75, 100, 125, 150, 200, 250, 300]
     disorder_strength = 0.0
     disorder_type = DisorderType.ONSITE
-    bernal = False
-    bernal_layer = 7
+    bernal = True
+    bernal_layer = 15
     n = 50
-    num_pairs = 1
+    start_pair = 1
+    end_pair = 1
+    # highlight second band pair blue
+    band_index = [1]
     mag = np.array([0, 0])  # Magnetic field in Tesla
     onsite_energy = 0.00
     ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
                         bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
+    zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
+    soliton_bx = ham.soliton_threshold()
+    soliton_bx_colision = ham.soliton_collision_threshold()
+    print(f"soliton threshold: {soliton_bx:.2f} T")
+    print(f"soliton collision threshold: {soliton_bx_colision:.2f} T")
+    mags.append(soliton_bx)
+    mags.append(soliton_bx_colision)
+    mags.append(zero_energy_bx_1)
+    mags.append(zero_energy_bx_2)
+
     for bx in mags:
         mag = np.array([bx, 0])  # Magnetic field in Tesla
         ham.update_mag(mag)
-        sim.band_structure(samples=400, hitrate=1)
-        sim.prob_edge(ham, num_pairs)
+        sim.band_structure(samples=400, hitrate=1, band_index=band_index)
+        sim.prob_edge(ham, start_pair, end_pair)
 
-    zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
-    soliton_bx = ham.soliton_threshold()
-
-    # look at soliton threshold field
-    q = np.array([0, 0])
-    ham.update_q(q)
-
-    mag = np.array([soliton_bx, 0])
-    ham.update_mag(mag)
-
-    sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham, num_pairs)
-
-    # look at zero energy threshold field
-    mag = np.array([zero_energy_bx_1, 0])
-    ham.update_mag(mag)
-
-    sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham, num_pairs)
-
-    mag = np.array([zero_energy_bx_2, 0])
-    ham.update_mag(mag)
-
-    sim.band_structure(samples=400, hitrate=1)
-    sim.prob_edge(ham, num_pairs)
 
 def dos():
     disorder_strength = 0.1
@@ -105,9 +92,9 @@ def main():
     np.set_printoptions(precision=3, suppress=True, linewidth=400)
     #egap()
     #dos()
-    #band_structure_prob()
+    band_structure_prob()
     #check_ham()
-    trig_warp()
+    #trig_warp()
 
 if __name__ == "__main__":
     main()

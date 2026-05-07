@@ -13,8 +13,10 @@ class Simulation:
     def __init__(self, ham: Hamiltonian):
         self.ham = ham
 
-    def _plot_band_structure(self, energies, qx_vals, hitrate: int = 10):
+    def _plot_band_structure(self, energies, qx_vals, hitrate: int = 10, band_index: list[int] = []):
         _, ax = plt.subplots(figsize=(7, 5))
+        if self.ham.bernal_fault and band_index == []:
+            band_index = [0, 1]  # default to plot the two bands closest to zero energy if bernal fault is present
 
         to_plot = energies.shape[1] // (2 * hitrate)
         mid = energies.shape[1] // 2
@@ -22,7 +24,7 @@ class Simulation:
             band = n * hitrate
             upper_band = mid + band
             lower_band = mid - band - 1
-            if self.ham.bernal_fault and (n == 0 or n == 1):
+            if n in band_index:
                 ax.plot(qx_vals, energies[:, upper_band],
                         color='blue', lw=1.1, alpha=1.0)
                 ax.plot(qx_vals, energies[:, lower_band],
@@ -35,7 +37,7 @@ class Simulation:
 
         ax.set_xlabel(r"$q_x / q_c$", fontsize=12)
         ax.set_ylabel(r"$\epsilon / \gamma_1$", fontsize=12)
-        ax.set_title(f"$B_x = {self.ham.mag[0]}$T", fontsize=13)
+        ax.set_title(f"$B_x = {self.ham.mag[0]:.2f}$T", fontsize=13)
         ax.axhline(0, color='gray', lw=0.6, ls='--')  # zero-energy line
         ax.set_xlim(0, 1.5)
         ax.set_ylim(-2, 2)
@@ -43,7 +45,8 @@ class Simulation:
         plt.tight_layout()
         folder_path = f"./plots/{self.ham.file_path}/band_structure"
         os.makedirs(folder_path, exist_ok=True)
-        file_path = f"{folder_path}/band_structure_Bx{self.ham.mag[0]}_{self.ham.disorder_text}.png"
+        print(f"Saving figure as {folder_path}/band_structure_Bx{self.ham.mag[0]:.2f}_{self.ham.disorder_text}.png")
+        file_path = f"{folder_path}/band_structure_Bx{self.ham.mag[0]:.2f}_{self.ham.disorder_text}.png"
         plt.savefig(file_path, dpi=300)
         plt.show()
 
@@ -164,7 +167,7 @@ class Simulation:
             os.makedirs("./plots/evals_comparison")
         plt.savefig(f'./plots/evals_comparison/evals_Bx{self.ham.mag[0]}_N{self.ham.n}.png')
 
-    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5):
+    def band_structure(self, samples: int, hitrate: int, max_qx_qc = 1.5, band_index: list[int] = []):
         energies = np.zeros((samples, 2 * self.ham.n))
         max_qx = max_qx_qc * self.ham.qc
         qxs = np.linspace(0, max_qx, samples)
@@ -175,7 +178,7 @@ class Simulation:
                 evals = np.linalg.eigvalsh(matrix)
                 energies[i, :] = np.sort(evals) / self.ham.hop[1]
                 bar()
-        self._plot_band_structure(energies, qxs / self.ham.qc, hitrate)
+        self._plot_band_structure(energies, qxs / self.ham.qc, hitrate, band_index)
         return self.ham
 
     def eg_disorder(self, max_disorder_strength: float = 10, samples: int=20):
@@ -249,7 +252,7 @@ class Simulation:
         plt.xlabel('j')
         plt.ylabel(r'$|\psi|^2$')
         # format magnetic field in title with 2 decimal place
-        plt.title(f'Edge State Probability Densities\nMagnetic Field: Bx={self.ham.mag[0]:.2f} T')
+        plt.title(f'Probability Densities\nMagnetic Field: Bx={self.ham.mag[0]:.2f} T')
         plt.xticks(ticks=np.arange(0, j_max, 20))
         plt.legend()
         file_path = f'./plots/{self.ham.file_path}/prob_dist'
@@ -286,9 +289,9 @@ class Simulation:
 
 
 
-    def prob_edge(self, ham: Hamiltonian, num_pairs: int = 2):
+    def prob_edge(self, ham: Hamiltonian, num_pairs: int = 2, start: int = 0):
         ham.update_q(np.array([0, 0]))
-        zero_states = ham.zero_energy_states(num_pairs)
+        zero_states = ham.zero_energy_states(num_pairs, start)
         self.plot_multi_prob_dist(zero_states)
 
     def trig_warp(self, ham: Hamiltonian, band_index: int | None = None):
