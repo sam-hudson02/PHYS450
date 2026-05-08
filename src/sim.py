@@ -290,7 +290,8 @@ class Simulation:
 
 
     def prob_edge(self, ham: Hamiltonian, num_pairs: int = 2, start: int = 0):
-        ham.update_q(np.array([0, 0]))
+        qx = 0 * self.ham.qc
+        ham.update_q(np.array([qx, 0]))
         zero_states = ham.zero_energy_states(num_pairs, start)
         self.plot_multi_prob_dist(zero_states)
 

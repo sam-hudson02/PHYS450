@@ -364,7 +364,7 @@ class Hamiltonian:
             float: The threshold magnetic field in Tesla.
         """
         print(f"Calculating soliton collision threshold for Bernal layer {self.bernal_layer} and total layers {self.n}")
-        layer_offset = self.bernal_layer - ((self.n - 1) / 2)
+        layer_offset = (self.bernal_layer + 1) - ((self.n - 1) / 2)
         layer_position = layer_offset * self.d
         print(f"Layer offset from center: {layer_offset}")
         flux_0 = h / eC

@@ -16,36 +16,42 @@ def egap():
         sim.eg_disorder(max_disorder_strength=0.01, samples=1000)
 
 def band_structure_prob():
-    mags = [0.1, 25, 50, 75, 100, 125, 150, 200, 250, 300]
+    mags = [0.1, 25, 50, 75, 100, 125, 150, 200, 250, 300, 10000]
     disorder_strength = 0.0
     disorder_type = DisorderType.ONSITE
     bernal = True
     bernal_layer = 15
     n = 50
-    start_pair = 1
-    end_pair = 1
+    start_pair = 0
+    end_pair = 0
     # highlight second band pair blue
-    band_index = [1]
+    band_index = [0]
     mag = np.array([0, 0])  # Magnetic field in Tesla
     onsite_energy = 0.00
     ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
                         bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
-    zero_energy_bx_1, zero_energy_bx_2 = ham.zero_energy_threshold_bernal()
+    zero_energy_bx = ham.zero_energy_threshold()
     soliton_bx = ham.soliton_threshold()
     soliton_bx_colision = ham.soliton_collision_threshold()
     print(f"soliton threshold: {soliton_bx:.2f} T")
     print(f"soliton collision threshold: {soliton_bx_colision:.2f} T")
     mags.append(soliton_bx)
     mags.append(soliton_bx_colision)
-    mags.append(zero_energy_bx_1)
-    mags.append(zero_energy_bx_2)
+    mags.append(zero_energy_bx)
 
     for bx in mags:
         mag = np.array([bx, 0])  # Magnetic field in Tesla
         ham.update_mag(mag)
         sim.band_structure(samples=400, hitrate=1, band_index=band_index)
         sim.prob_edge(ham, start_pair, end_pair)
+
+def band_structure():
+    q = np.array([0, 0])
+    mag = np.array([25, 0]) # Magnetic field in Tesla
+    ham = Hamiltonian(n=20, mag=mag, q=q)
+    sim = Simulation(ham)
+    sim.band_structure(samples=400, hitrate=1)
 
 
 def dos():
@@ -90,6 +96,7 @@ def trig_warp():
 
 def main():
     np.set_printoptions(precision=3, suppress=True, linewidth=400)
+    #band_structure()
     #egap()
     #dos()
     band_structure_prob()
