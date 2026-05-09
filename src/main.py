@@ -5,9 +5,9 @@ from ham import DisorderType, Hamiltonian
 
 def egap():
     bernal = True
-    bernal_layer = 9
-    mags = [0, 50, 100, 150]
-    onsite_energy = 0.02425
+    bernal_layer = 7
+    mags = [0, 50, 100, 150, 200]
+    onsite_energy = 0.381 / 10
     ham = Hamiltonian(n=20, bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
     for bx in mags:
@@ -17,17 +17,17 @@ def egap():
 
 def band_structure_prob():
     mags = [0.1, 25, 50, 75, 100, 125, 150, 200, 250, 300, 10000]
-    disorder_strength = 0.0
+    disorder_strength = 0.1
     disorder_type = DisorderType.ONSITE
     bernal = True
-    bernal_layer = 15
-    n = 50
+    bernal_layer = 7 
+    n = 20
     start_pair = 0
     end_pair = 0
     # highlight second band pair blue
     band_index = [0]
     mag = np.array([0, 0])  # Magnetic field in Tesla
-    onsite_energy = 0.00
+    onsite_energy = 0.381 / 10
     ham = Hamiltonian(n=n, disorder_type=disorder_type, disorder_strength=disorder_strength,
                         bernal_fault=bernal, bernal_layer=bernal_layer, onsite=onsite_energy)
     sim = Simulation(ham)
@@ -55,17 +55,19 @@ def band_structure():
 
 
 def dos():
+    onsite_energy = 0.381 / 10
     disorder_strength = 0.1
-    disorder_type = DisorderType.NONE
-    q = np.array([50, 0])
+    disorder_type = DisorderType.ONSITE
+    q = np.array([0, 0])
     r = 10
-    mag = np.array([0, 0]) # Magnetic field in Tesla
+    mag = np.array([50, 0]) # Magnetic field in Tesla
     bernal = True
     bernal_layer = 7
     ham = Hamiltonian(n=20, disorder_type=disorder_type, disorder_strength=disorder_strength,
-                      mag=mag, q=q, bernal_fault=bernal, bernal_layer=bernal_layer)
+                      mag=mag, q=q, bernal_fault=bernal, bernal_layer=bernal_layer, 
+                      onsite=onsite_energy)
     sim = Simulation(ham)
-    sim.dos(energy_range=2, r=r)
+    sim.dos(energy_range=1, r=r, q_steps=1000, max_qx_qc=10, steps=500)
 
 def check_ham():
     n = 20

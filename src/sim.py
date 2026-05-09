@@ -141,14 +141,14 @@ class Simulation:
     def _plot_dos(self, energies: np.ndarray, dos: np.ndarray, max_e: float):
         plt.figure(figsize=(8, 6))
         plt.plot(energies, dos, color='blue', lw=1.5)
-        plt.xlabel('Energy (eV)')
-        plt.ylabel('Density of States (1/eV)')
-        plt.title(f'Density of States\nMagnetic Field: Bx={self.ham.mag[0]} T, By={self.ham.mag[1]} T')
+        plt.xlabel(r'$\epsilon / \gamma_1$')
+        plt.ylabel(r'$\langle g(\epsilon) \rangle (1 / \gamma_1 a^2)$')
+        plt.title(f'Density of States\nBx={self.ham.mag[0]:.2f} T')
         plt.xlim(-max_e, max_e)
         plt.grid(False)
         file_path = f'./plots/{self.ham.file_path}/dos'
         os.makedirs(file_path, exist_ok=True)
-        file_name = f'{file_path}/dos_Bx{self.ham.mag[0]}_{self.ham.disorder_text}.png'
+        file_name = f'{file_path}/dos_Bx{self.ham.mag[0]:.2f}_{self.ham.disorder_text}.png'
         plt.savefig(file_name, dpi=300)
 
     def _plot_evals_comparison(self, collected_evals: list[np.ndarray], disorder_strengths: list[float]):
@@ -273,18 +273,46 @@ class Simulation:
             max_qx_qc: float = 10, q_steps: int = 1000):
         q_range = max_qx_qc * self.ham.qc
         qxs = np.linspace(0, q_range, q_steps)
-        e_range = energy_range * self.ham.hop[1]
+        e_range = energy_range
         es = np.linspace(-e_range, e_range, steps)
         dos_values = np.zeros(steps)
-        for qx in qxs:
-            q = np.array([qx, 0])
-            self.ham.update_q(q)
-            for _ in range(r):
-                self.ham.update_disorder()
-                evals = self.ham.evals()
+        q_step = max_qx_qc / q_steps
+
+        """
+        # iterate over relizations of disorder
+        for run in range(r):
+            print(f"Calculating DOS: Realization {run+1} of {r}")
+            self.ham.update_disorder()
+            with alive_bar(steps, title="Calculating DOS") as bar:
+                # scan over energy range for each realization of disorder
                 for i, e in enumerate(es):
-                    dos_values[i] += self.dos_at_e(e, evals)
-        dos_values /= (r)
+                    # integrate over qx for each energy value
+                    e_actual = e * self.ham.hop[1]
+                    for qx in qxs:
+                        q = np.array([qx, 0])
+                        self.ham.update_q(q)
+                        evals = self.ham.evals()
+                        dos_values[i] += self.dos_at_e(e_actual, evals)
+                    bar()
+        dos_values /= r 
+        dos_values /= self.ham.d
+        dos_values *= q_step
+        """
+
+        with alive_bar(q_steps , title="Calculating DOS") as bar:
+            for qx in qxs:
+                q = np.array([qx, 0])
+                self.ham.update_q(q)
+                for _ in range(r):
+                    self.ham.update_disorder()
+                    evals = self.ham.evals()
+                    for i, e in enumerate(es):
+                        e_actual = e * self.ham.hop[1]
+                        dos_values[i] += self.dos_at_e(e_actual, evals)
+                bar()
+        dos_values /= r
+        dos_values /= self.ham.gamma_1
+        dos_values *= q_step
         self._plot_dos(es, dos_values, e_range)
 
 

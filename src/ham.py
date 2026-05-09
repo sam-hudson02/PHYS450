@@ -288,7 +288,6 @@ class Hamiltonian:
 
     def zero_energy_states(self, start: int = 0, end: int = 0) -> tuple[list[np.ndarray], list[complex]]:
         evals, evecs = self.eigh()
-        print(evals)
         zero_states_vec = []
         zero_states_e = []
         """
@@ -314,8 +313,6 @@ class Hamiltonian:
         middle_neg = self.n - 1
 
         for i in range(start, end+1):
-            print(i)
-            print(f"Selected eigenvalues for zero-energy states {i}: {evals[middle_neg - i]}, {evals[middle_pos + i]}")
             zero_state_vec_pos = evecs[:, middle_pos + i]
             zero_state_vec_neg = evecs[:, middle_neg - i]
             zero_states_vec.append(zero_state_vec_pos)
@@ -327,10 +324,9 @@ class Hamiltonian:
         return zero_states_vec, zero_states_e
 
     def egap(self) -> float:
-        evals = self.evals()
-        # return the middle values
-        mid = len(evals) // 2
-        gap = evals[mid] - evals[mid - 1]
+        _, energies = self.zero_energy_states()
+        gap = np.abs(energies[0] - energies[1])
+
         return gap
 
     def flux_all(self) -> float:
